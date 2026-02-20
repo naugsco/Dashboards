@@ -242,6 +242,8 @@ async def fetch_news_for_country(country: str, http_client: httpx.AsyncClient) -
     except Exception as e:
         logger.error(f"Error fetching from sources for {country}: {e}")
 
+    await asyncio.sleep(1.2)  # Rate limit delay between source and euronews calls
+
     try:
         resp = await http_client.get(
             f"{NEWS_API_BASE}/everything",
