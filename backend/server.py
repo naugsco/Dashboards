@@ -286,13 +286,13 @@ async def fetch_all_news():
     logger.info("Starting news fetch cycle...")
     all_stories = []
     async with httpx.AsyncClient() as http_client:
-        tasks = [fetch_news_for_country(country, http_client) for country in COUNTRIES]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        for result in results:
-            if isinstance(result, list):
-                all_stories.extend(result)
-            elif isinstance(result, Exception):
-                logger.error(f"Fetch task error: {result}")
+        for country in COUNTRIES:
+            try:
+                stories = await fetch_news_for_country(country, http_client)
+                all_stories.extend(stories)
+                await asyncio.sleep(1.2)  # Rate limit: ~1 req/sec for free tier
+            except Exception as e:
+                logger.error(f"Fetch task error for {country}: {e}")
 
     all_stories = multi_source_boost(all_stories)
     all_stories = deduplicate_stories(all_stories)
