@@ -329,15 +329,9 @@ async def fetch_all_news():
     all_stories = enforce_source_diversity(all_stories)
     all_stories.sort(key=lambda s: s.get("relevance_score", 0), reverse=True)
 
-    await db.news_meta.update_one(
-        {"key": "last_fetch"},
-        {"$set": {
-            "key": "last_fetch",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "story_count": len(all_stories),
-        }},
-        upsert=True
-    )
+    for story in all_stories:
+        story["story_hash"] = hashlib.md5(story["title"].encode()).hexdigest()
+        story["fetched_at"] = datetime.now(timezone.utc).isoformat()
 
     # Only replace data if we actually got stories; preserve existing data on API failure
     if all_stories:
@@ -348,7 +342,17 @@ async def fetch_all_news():
         existing = await db.news_stories.count_documents({})
         logger.info(f"No new stories fetched (API may be rate-limited). Preserving {existing} existing stories.")
 
-    return len(all_stories) if all_stories else await db.news_stories.count_documents({})
+    await db.news_meta.update_one(
+        {"key": "last_fetch"},
+        {"$set": {
+            "key": "last_fetch",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "story_count": await db.news_stories.count_documents({}),
+        }},
+        upsert=True
+    )
+
+    return await db.news_stories.count_documents({})
 
 
 class StoryResponse(BaseModel):
