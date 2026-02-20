@@ -1,0 +1,115 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "E1 News Dashboard",
+      "tone": "Authoritative, Urgent, Swiss-Minimalist",
+      "aesthetic": "Dark Mode Brutalism",
+      "core_values": ["Clarity", "Speed", "Truth", "Contrast"]
+    },
+    "typography": {
+      "font_family": {
+        "headings": "Libre Baskerville, serif",
+        "body": "Manrope, sans-serif",
+        "mono": "JetBrains Mono, monospace"
+      },
+      "scale": {
+        "h1": "text-4xl md:text-6xl font-bold tracking-tight leading-none",
+        "h2": "text-3xl md:text-4xl font-semibold tracking-tight",
+        "h3": "text-xl md:text-2xl font-medium",
+        "body": "text-base leading-relaxed",
+        "caption": "text-sm text-muted-foreground font-mono"
+      },
+      "imports": [
+        "https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Manrope:wght@400;500;700&family=JetBrains+Mono:wght@400&display=swap"
+      ]
+    },
+    "colors": {
+      "theme": "dark",
+      "palette": {
+        "background": "#09090b",
+        "foreground": "#fafafa",
+        "card": "#18181b",
+        "card_foreground": "#fafafa",
+        "border": "#27272a",
+        "primary": "#fafafa",
+        "secondary": "#27272a",
+        "accent": "#f4f4f5",
+        "muted": "#71717a",
+        "politics": "#f97316",
+        "disaster": "#3b82f6",
+        "success": "#22c55e",
+        "warning": "#eab308"
+      }
+    },
+    "layout": {
+      "spacing": "Relaxed (2x standard)",
+      "container": "max-w-[1400px] mx-auto px-4 md:px-8",
+      "grid": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6",
+      "bento_grid": "grid grid-cols-1 md:grid-cols-4 gap-4 auto-rows-[minmax(200px,auto)]"
+    },
+    "components": {
+      "NewsCard": {
+        "style": "bg-card border border-border rounded-sm hover:border-primary/50 transition-colors duration-300 flex flex-col overflow-hidden group",
+        "image_style": "w-full h-48 object-cover grayscale group-hover:grayscale-0 transition-all duration-500",
+        "badge_style": "inline-flex items-center rounded-sm border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80"
+      },
+      "CountryFilter": {
+        "style": "flex flex-wrap gap-2 p-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur z-50",
+        "item_active": "bg-primary text-primary-foreground hover:bg-primary/90",
+        "item_inactive": "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+      },
+      "Header": {
+        "style": "border-b border-border py-6 mb-8 flex justify-between items-center"
+      }
+    },
+    "visual_enhancers": {
+      "noise_overlay": "opacity-5 pointer-events-none fixed inset-0 z-[100] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]",
+      "glassmorphism": "backdrop-blur-md bg-background/80 border-b border-white/10"
+    }
+  },
+  "assets": {
+    "images": {
+      "logos": {
+        "BBC": "https://upload.wikimedia.org/wikipedia/commons/e/eb/BBC.svg",
+        "AP": "https://upload.wikimedia.org/wikipedia/commons/0/0c/Associated_Press_logo_2012.svg",
+        "Euronews": "https://upload.wikimedia.org/wikipedia/commons/3/35/Euronews_logo.svg"
+      },
+      "placeholders": {
+        "politics": "https://images.unsplash.com/photo-1529101091760-61df6be24296?auto=format&fit=crop&q=80",
+        "disaster": "https://images.pexels.com/photos/12983240/pexels-photo-12983240.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "general": "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80"
+      }
+    }
+  },
+  "instructions": {
+    "general": [
+      "Use 'Libre Baskerville' for all Headings (h1-h3).",
+      "Use 'Manrope' for all body text.",
+      "Use 'JetBrains Mono' for metadata (dates, source names).",
+      "Implement a 'Bento Grid' layout where high-priority stories (Politics/Disaster) span 2 columns.",
+      "Ensure Dark Mode is default and permanent (force class='dark' on html/body).",
+      "Use the provided noise overlay for a 'print' texture feel.",
+      "Countries to filter: UK, Ireland, Portugal, Iceland, Moldova, Latvia, Lithuania, Estonia, Finland, Norway, Sweden, Cape Verde.",
+      "Auto-refresh functionality must be visible (e.g., a progress bar or countdown).",
+      "Do not use gradients for backgrounds. Use solid Zinc-950 (#09090b).",
+      "Add data-testid attributes to all interactive elements."
+    ],
+    "components": {
+      "StoryCard": "Must display: Title, Summary (truncated), Source Badge, Country Tag, Relevance Score, Time ago.",
+      "SourceDiversity": "Visual indicator (e.g., progress bar or pie chart) showing distribution of sources.",
+      "PriorityTags": "Politics (Orange), Disaster (Blue). High relevance scores should visually highlight the card."
+    }
+  },
+  "universal_guidelines": [
+    "You tend to converge toward generic outputs. Avoid this.",
+    "Dark colors look good when used independently without gradients.",
+    "Don't make generic centered layouts.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters.",
+    "NEVER: use AI assistant Emoji characters.",
+    "Every interaction needs micro-animations.",
+    "Use 2-3x more spacing than feels comfortable.",
+    "Subtle grain textures separate good from extraordinary.",
+    "Use 'sonner' for toasts."
+  ]
+}
