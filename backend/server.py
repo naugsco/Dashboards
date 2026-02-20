@@ -1,72 +1,406 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Query
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import httpx
+import asyncio
+import hashlib
+import re
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
-import uuid
-from datetime import datetime, timezone
-
+from typing import List, Optional
+from datetime import datetime, timezone, timedelta
+from difflib import SequenceMatcher
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
 app = FastAPI()
-
-# Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+NEWS_API_KEY = os.environ.get('NEWS_API_KEY', '')
+NEWS_API_BASE = "https://newsapi.org/v2"
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+COUNTRIES = {
+    "United Kingdom": {"code": "gb", "keywords": ["UK", "Britain", "British", "England", "Scotland", "Wales", "London", "Westminster", "Downing Street"]},
+    "Ireland": {"code": "ie", "keywords": ["Irish", "Dublin", "Taoiseach", "Dail"]},
+    "Portugal": {"code": "pt", "keywords": ["Portuguese", "Lisbon", "Lisboa"]},
+    "Iceland": {"code": "is", "keywords": ["Icelandic", "Reykjavik"]},
+    "Moldova": {"code": "md", "keywords": ["Moldovan", "Chisinau", "Kishinev"]},
+    "Latvia": {"code": "lv", "keywords": ["Latvian", "Riga"]},
+    "Lithuania": {"code": "lt", "keywords": ["Lithuanian", "Vilnius"]},
+    "Estonia": {"code": "ee", "keywords": ["Estonian", "Tallinn"]},
+    "Finland": {"code": "fi", "keywords": ["Finnish", "Helsinki"]},
+    "Norway": {"code": "no", "keywords": ["Norwegian", "Oslo"]},
+    "Sweden": {"code": "se", "keywords": ["Swedish", "Stockholm"]},
+    "Cape Verde": {"code": "cv", "keywords": ["Cape Verdean", "Praia", "Cabo Verde"]},
+}
 
-# Add your routes to the router instead of directly to app
+SPORTS_KEYWORDS = [
+    "football", "soccer", "cricket", "rugby", "tennis", "golf", "basketball",
+    "baseball", "hockey", "nfl", "nba", "mlb", "nhl", "premier league",
+    "champions league", "world cup", "olympics", "olympic", "athletic",
+    "marathon", "tournament", "championship", "playoff", "relegation",
+    "transfer", "signing", "coach", "striker", "goalkeeper", "midfielder",
+    "defender", "batting", "bowling", "wicket", "innings", "touchdown",
+    "slam dunk", "grand prix", "formula 1", "f1", "motorsport", "boxing",
+    "mma", "ufc", "wrestling", "swimming", "cycling", "tour de france",
+    "la liga", "serie a", "bundesliga", "ligue 1", "europa league",
+    "super bowl", "wimbledon", "roland garros", "us open tennis",
+    "australian open tennis", "match day", "half-time", "penalty kick",
+    "red card", "yellow card", "offside", "hat-trick", "ballon d'or",
+    "fifa", "uefa", "sporting", "atletico", "real madrid", "barcelona fc",
+    "manchester united", "manchester city", "liverpool fc", "chelsea fc",
+    "arsenal fc", "tottenham", "six nations"
+]
+
+POLITICS_KEYWORDS = [
+    "election", "parliament", "minister", "president", "government",
+    "legislation", "law", "policy", "vote", "referendum", "diplomatic",
+    "sanction", "treaty", "political", "opposition", "coalition",
+    "prime minister", "chancellor", "congress", "senate", "nato",
+    "european union", "eu", "brexit", "democracy", "authoritarian",
+    "corruption", "impeach", "cabinet", "foreign affairs", "ambassador",
+    "summit", "bilateral", "geopolitical", "sovereignty"
+]
+
+DISASTER_KEYWORDS = [
+    "earthquake", "tsunami", "hurricane", "typhoon", "cyclone", "tornado",
+    "flood", "flooding", "wildfire", "fire", "volcano", "eruption",
+    "landslide", "avalanche", "drought", "famine", "storm", "blizzard",
+    "heatwave", "heat wave", "cold snap", "freeze", "disaster", "emergency",
+    "evacuation", "rescue", "casualties", "death toll", "devastation",
+    "destruction", "catastrophe", "crisis", "severe weather", "extreme weather",
+    "climate emergency", "power outage", "blackout"
+]
+
+TRUSTED_SOURCES = {
+    "associated-press": "AP",
+    "bbc-news": "BBC",
+}
+EURONEWS_DOMAIN = "euronews.com"
+
+
+def is_sports(title: str, description: str) -> bool:
+    text = f"{title} {description}".lower()
+    count = sum(1 for kw in SPORTS_KEYWORDS if kw in text)
+    return count >= 2
+
+
+def classify_priority(title: str, description: str) -> str:
+    text = f"{title} {description}".lower()
+    disaster_score = sum(1 for kw in DISASTER_KEYWORDS if kw in text)
+    politics_score = sum(1 for kw in POLITICS_KEYWORDS if kw in text)
+    if disaster_score >= 2:
+        return "disaster"
+    if politics_score >= 2:
+        return "politics"
+    if disaster_score >= 1:
+        return "disaster"
+    if politics_score >= 1:
+        return "politics"
+    return "general"
+
+
+def compute_relevance(title: str, description: str, country: str) -> float:
+    text = f"{title} {description}".lower()
+    country_lower = country.lower()
+    score = 0.0
+    if country_lower in text:
+        score += 5.0
+    if country_lower in title.lower():
+        score += 3.0
+    country_info = COUNTRIES.get(country, {})
+    for kw in country_info.get("keywords", []):
+        if kw.lower() in text:
+            score += 2.0
+        if kw.lower() in title.lower():
+            score += 1.5
+    priority = classify_priority(title, description)
+    if priority == "disaster":
+        score += 3.0
+    elif priority == "politics":
+        score += 2.0
+    return min(score, 20.0)
+
+
+def deduplicate_stories(stories: list) -> list:
+    unique = []
+    for story in stories:
+        is_dup = False
+        for existing in unique:
+            similarity = SequenceMatcher(None, story["title"].lower(), existing["title"].lower()).ratio()
+            if similarity > 0.65:
+                if story.get("source_count", 1) > existing.get("source_count", 1):
+                    existing["source_count"] = story.get("source_count", 1)
+                    existing["sources"] = list(set(existing.get("sources", []) + story.get("sources", [])))
+                is_dup = True
+                break
+        if not is_dup:
+            unique.append(story)
+    return unique
+
+
+def enforce_source_diversity(stories: list, max_per_source: int = 0) -> list:
+    if not stories:
+        return stories
+    total = len(stories)
+    num_sources = len(set(s.get("source", "") for s in stories))
+    if num_sources == 0:
+        return stories
+    max_per_source = max(total // num_sources + 2, 5)
+    source_counts = {}
+    result = []
+    for story in stories:
+        src = story.get("source", "Unknown")
+        current = source_counts.get(src, 0)
+        if current < max_per_source:
+            result.append(story)
+            source_counts[src] = current + 1
+    return result
+
+
+def multi_source_boost(stories: list) -> list:
+    title_map = {}
+    for story in stories:
+        key = re.sub(r'[^a-z0-9\s]', '', story["title"].lower()).strip()
+        found = False
+        for existing_key in title_map:
+            if SequenceMatcher(None, key, existing_key).ratio() > 0.6:
+                title_map[existing_key]["sources"].add(story.get("source", "Unknown"))
+                title_map[existing_key]["stories"].append(story)
+                found = True
+                break
+        if not found:
+            title_map[key] = {
+                "sources": {story.get("source", "Unknown")},
+                "stories": [story]
+            }
+    boosted = []
+    for key, data in title_map.items():
+        best = max(data["stories"], key=lambda s: s.get("relevance_score", 0))
+        best["source_count"] = len(data["sources"])
+        best["sources"] = list(data["sources"])
+        if best["source_count"] > 1:
+            best["relevance_score"] = best.get("relevance_score", 0) + (best["source_count"] * 1.5)
+        boosted.append(best)
+    return boosted
+
+
+async def fetch_news_for_country(country: str, http_client: httpx.AsyncClient) -> list:
+    stories = []
+    country_info = COUNTRIES.get(country, {})
+    search_terms = [country] + country_info.get("keywords", [])[:2]
+    query = " OR ".join(f'"{t}"' for t in search_terms)
+
+    try:
+        source_ids = ",".join(TRUSTED_SOURCES.keys())
+        resp = await http_client.get(
+            f"{NEWS_API_BASE}/everything",
+            params={
+                "q": query,
+                "sources": source_ids,
+                "language": "en",
+                "sortBy": "publishedAt",
+                "pageSize": 30,
+                "apiKey": NEWS_API_KEY,
+            },
+            timeout=15.0
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            for article in data.get("articles", []):
+                title = article.get("title", "") or ""
+                desc = article.get("description", "") or ""
+                if is_sports(title, desc):
+                    continue
+                source_id = article.get("source", {}).get("id", "")
+                source_name = TRUSTED_SOURCES.get(source_id, article.get("source", {}).get("name", "Unknown"))
+                stories.append({
+                    "title": title,
+                    "description": desc,
+                    "url": article.get("url", ""),
+                    "image_url": article.get("urlToImage", ""),
+                    "published_at": article.get("publishedAt", ""),
+                    "source": source_name,
+                    "source_id": source_id,
+                    "country": country,
+                    "priority": classify_priority(title, desc),
+                    "relevance_score": compute_relevance(title, desc, country),
+                    "sources": [source_name],
+                    "source_count": 1,
+                })
+    except Exception as e:
+        logger.error(f"Error fetching from sources for {country}: {e}")
+
+    try:
+        resp = await http_client.get(
+            f"{NEWS_API_BASE}/everything",
+            params={
+                "q": query,
+                "domains": EURONEWS_DOMAIN,
+                "language": "en",
+                "sortBy": "publishedAt",
+                "pageSize": 15,
+                "apiKey": NEWS_API_KEY,
+            },
+            timeout=15.0
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            for article in data.get("articles", []):
+                title = article.get("title", "") or ""
+                desc = article.get("description", "") or ""
+                if is_sports(title, desc):
+                    continue
+                stories.append({
+                    "title": title,
+                    "description": desc,
+                    "url": article.get("url", ""),
+                    "image_url": article.get("urlToImage", ""),
+                    "published_at": article.get("publishedAt", ""),
+                    "source": "Euronews",
+                    "source_id": "euronews",
+                    "country": country,
+                    "priority": classify_priority(title, desc),
+                    "relevance_score": compute_relevance(title, desc, country),
+                    "sources": ["Euronews"],
+                    "source_count": 1,
+                })
+    except Exception as e:
+        logger.error(f"Error fetching from Euronews for {country}: {e}")
+
+    return stories
+
+
+async def fetch_all_news():
+    logger.info("Starting news fetch cycle...")
+    all_stories = []
+    async with httpx.AsyncClient() as http_client:
+        tasks = [fetch_news_for_country(country, http_client) for country in COUNTRIES]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for result in results:
+            if isinstance(result, list):
+                all_stories.extend(result)
+            elif isinstance(result, Exception):
+                logger.error(f"Fetch task error: {result}")
+
+    all_stories = multi_source_boost(all_stories)
+    all_stories = deduplicate_stories(all_stories)
+    all_stories = enforce_source_diversity(all_stories)
+    all_stories.sort(key=lambda s: s.get("relevance_score", 0), reverse=True)
+
+    for story in all_stories:
+        story["story_hash"] = hashlib.md5(story["title"].encode()).hexdigest()
+        story["fetched_at"] = datetime.now(timezone.utc).isoformat()
+
+    await db.news_stories.delete_many({})
+    if all_stories:
+        await db.news_stories.insert_many(all_stories)
+
+    await db.news_meta.update_one(
+        {"key": "last_fetch"},
+        {"$set": {
+            "key": "last_fetch",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "story_count": len(all_stories),
+        }},
+        upsert=True
+    )
+    logger.info(f"Fetched and stored {len(all_stories)} stories")
+    return len(all_stories)
+
+
+class StoryResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    title: str
+    description: str
+    url: str
+    image_url: Optional[str] = None
+    published_at: str
+    source: str
+    country: str
+    priority: str
+    relevance_score: float
+    sources: List[str] = []
+    source_count: int = 1
+    story_hash: str = ""
+    fetched_at: str = ""
+
+
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "News Dashboard API"}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
+@api_router.get("/news")
+async def get_news(
+    country: Optional[str] = Query(None),
+    priority: Optional[str] = Query(None),
+    limit: int = Query(100, le=500),
+):
+    query = {}
+    if country and country != "all":
+        query["country"] = country
+    if priority and priority != "all":
+        query["priority"] = priority
 
-# Include the router in the main app
+    stories = await db.news_stories.find(query, {"_id": 0}).sort("relevance_score", -1).to_list(limit)
+    return {"stories": stories, "count": len(stories)}
+
+
+@api_router.get("/news/stats")
+async def get_news_stats():
+    pipeline = [
+        {"$group": {"_id": "$source", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ]
+    source_dist = await db.news_stories.aggregate(pipeline).to_list(100)
+
+    country_pipeline = [
+        {"$group": {"_id": "$country", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ]
+    country_dist = await db.news_stories.aggregate(country_pipeline).to_list(100)
+
+    priority_pipeline = [
+        {"$group": {"_id": "$priority", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ]
+    priority_dist = await db.news_stories.aggregate(priority_pipeline).to_list(100)
+
+    meta = await db.news_meta.find_one({"key": "last_fetch"}, {"_id": 0})
+    total = await db.news_stories.count_documents({})
+
+    return {
+        "total_stories": total,
+        "source_distribution": [{"source": s["_id"], "count": s["count"]} for s in source_dist],
+        "country_distribution": [{"country": c["_id"], "count": c["count"]} for c in country_dist],
+        "priority_distribution": [{"priority": p["_id"], "count": p["count"]} for p in priority_dist],
+        "last_updated": meta.get("timestamp") if meta else None,
+    }
+
+
+@api_router.get("/news/countries")
+async def get_countries():
+    return {"countries": list(COUNTRIES.keys())}
+
+
+@api_router.post("/news/refresh")
+async def trigger_refresh():
+    count = await fetch_all_news()
+    return {"message": "Refresh complete", "story_count": count}
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -77,13 +411,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+
+background_task = None
+
+async def periodic_fetch():
+    while True:
+        try:
+            await fetch_all_news()
+        except Exception as e:
+            logger.error(f"Periodic fetch error: {e}")
+        await asyncio.sleep(900)  # 15 minutes
+
+
+@app.on_event("startup")
+async def startup():
+    global background_task
+    background_task = asyncio.create_task(periodic_fetch())
+    logger.info("Background news fetcher started (every 15 minutes)")
+
 
 @app.on_event("shutdown")
-async def shutdown_db_client():
+async def shutdown():
+    global background_task
+    if background_task:
+        background_task.cancel()
     client.close()
