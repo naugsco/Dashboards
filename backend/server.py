@@ -196,111 +196,133 @@ def multi_source_boost(stories: list) -> list:
     return boosted
 
 
-async def fetch_news_for_country(country: str, http_client: httpx.AsyncClient) -> list:
-    stories = []
-    country_info = COUNTRIES.get(country, {})
-    search_terms = [country] + country_info.get("keywords", [])[:2]
-    query = " OR ".join(f'"{t}"' for t in search_terms)
-
-    try:
-        source_ids = ",".join(TRUSTED_SOURCES.keys())
-        resp = await http_client.get(
-            f"{NEWS_API_BASE}/everything",
-            params={
-                "q": query,
-                "sources": source_ids,
-                "language": "en",
-                "sortBy": "publishedAt",
-                "pageSize": 30,
-                "apiKey": NEWS_API_KEY,
-            },
-            timeout=15.0
-        )
-        if resp.status_code == 200:
-            data = resp.json()
-            for article in data.get("articles", []):
-                title = article.get("title", "") or ""
-                desc = article.get("description", "") or ""
-                if is_sports(title, desc):
-                    continue
-                source_id = article.get("source", {}).get("id", "")
-                source_name = TRUSTED_SOURCES.get(source_id, article.get("source", {}).get("name", "Unknown"))
-                stories.append({
-                    "title": title,
-                    "description": desc,
-                    "url": article.get("url", ""),
-                    "image_url": article.get("urlToImage", ""),
-                    "published_at": article.get("publishedAt", ""),
-                    "source": source_name,
-                    "source_id": source_id,
-                    "country": country,
-                    "priority": classify_priority(title, desc),
-                    "relevance_score": compute_relevance(title, desc, country),
-                    "sources": [source_name],
-                    "source_count": 1,
-                })
-        elif resp.status_code == 429:
-            logger.warning(f"Rate limited for {country} (sources). Waiting 5s...")
-            await asyncio.sleep(5)
-    except Exception as e:
-        logger.error(f"Error fetching from sources for {country}: {e}")
-
-    await asyncio.sleep(1.2)  # Rate limit delay between source and euronews calls
-
-    try:
-        resp = await http_client.get(
-            f"{NEWS_API_BASE}/everything",
-            params={
-                "q": query,
-                "domains": EURONEWS_DOMAIN,
-                "language": "en",
-                "sortBy": "publishedAt",
-                "pageSize": 15,
-                "apiKey": NEWS_API_KEY,
-            },
-            timeout=15.0
-        )
-        if resp.status_code == 200:
-            data = resp.json()
-            for article in data.get("articles", []):
-                title = article.get("title", "") or ""
-                desc = article.get("description", "") or ""
-                if is_sports(title, desc):
-                    continue
-                stories.append({
-                    "title": title,
-                    "description": desc,
-                    "url": article.get("url", ""),
-                    "image_url": article.get("urlToImage", ""),
-                    "published_at": article.get("publishedAt", ""),
-                    "source": "Euronews",
-                    "source_id": "euronews",
-                    "country": country,
-                    "priority": classify_priority(title, desc),
-                    "relevance_score": compute_relevance(title, desc, country),
-                    "sources": ["Euronews"],
-                    "source_count": 1,
-                })
-        elif resp.status_code == 429:
-            logger.warning(f"Rate limited for {country} (euronews). Waiting 5s...")
-            await asyncio.sleep(5)
-    except Exception as e:
-        logger.error(f"Error fetching from Euronews for {country}: {e}")
-
-    return stories
+def assign_countries(title: str, description: str) -> list:
+    """Assign relevant countries to a story based on content."""
+    text = f"{title} {description}".lower()
+    matched = []
+    for country, info in COUNTRIES.items():
+        if country.lower() in text:
+            matched.append(country)
+            continue
+        for kw in info.get("keywords", []):
+            if kw.lower() in text:
+                matched.append(country)
+                break
+    return matched if matched else []
 
 
 async def fetch_all_news():
     logger.info("Starting news fetch cycle...")
     all_stories = []
+    all_country_terms = []
+    for country, info in COUNTRIES.items():
+        all_country_terms.append(country)
+        all_country_terms.extend(info.get("keywords", [])[:2])
+
+    # Build a broad query with key terms (NewsAPI max ~500 chars)
+    # Use the most distinctive terms to stay within limits
+    key_terms = list(COUNTRIES.keys())
+    query = " OR ".join(f'"{t}"' for t in key_terms)
+
     async with httpx.AsyncClient() as http_client:
-        for country in COUNTRIES:
-            try:
-                stories = await fetch_news_for_country(country, http_client)
-                all_stories.extend(stories)
-                await asyncio.sleep(1.2)  # Rate limit: ~1 req/sec for free tier
-            except Exception as e:
-                logger.error(f"Fetch task error for {country}: {e}")
+        # Call 1: AP + BBC
+        try:
+            source_ids = ",".join(TRUSTED_SOURCES.keys())
+            resp = await http_client.get(
+                f"{NEWS_API_BASE}/everything",
+                params={
+                    "q": query,
+                    "sources": source_ids,
+                    "language": "en",
+                    "sortBy": "publishedAt",
+                    "pageSize": 100,
+                    "apiKey": NEWS_API_KEY,
+                },
+                timeout=20.0
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                logger.info(f"AP/BBC returned {data.get('totalResults', 0)} results")
+                for article in data.get("articles", []):
+                    title = article.get("title", "") or ""
+                    desc = article.get("description", "") or ""
+                    if is_sports(title, desc):
+                        continue
+                    countries = assign_countries(title, desc)
+                    if not countries:
+                        continue
+                    source_id = article.get("source", {}).get("id", "")
+                    source_name = TRUSTED_SOURCES.get(source_id, article.get("source", {}).get("name", "Unknown"))
+                    for c in countries:
+                        all_stories.append({
+                            "title": title,
+                            "description": desc,
+                            "url": article.get("url", ""),
+                            "image_url": article.get("urlToImage", ""),
+                            "published_at": article.get("publishedAt", ""),
+                            "source": source_name,
+                            "source_id": source_id,
+                            "country": c,
+                            "priority": classify_priority(title, desc),
+                            "relevance_score": compute_relevance(title, desc, c),
+                            "sources": [source_name],
+                            "source_count": 1,
+                        })
+            elif resp.status_code == 429:
+                logger.warning("Rate limited on AP/BBC call. Will retry next cycle.")
+            else:
+                logger.warning(f"AP/BBC call returned {resp.status_code}: {resp.text[:200]}")
+        except Exception as e:
+            logger.error(f"Error fetching AP/BBC: {e}")
+
+        await asyncio.sleep(2)
+
+        # Call 2: Euronews
+        try:
+            resp = await http_client.get(
+                f"{NEWS_API_BASE}/everything",
+                params={
+                    "q": query,
+                    "domains": EURONEWS_DOMAIN,
+                    "language": "en",
+                    "sortBy": "publishedAt",
+                    "pageSize": 100,
+                    "apiKey": NEWS_API_KEY,
+                },
+                timeout=20.0
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                logger.info(f"Euronews returned {data.get('totalResults', 0)} results")
+                for article in data.get("articles", []):
+                    title = article.get("title", "") or ""
+                    desc = article.get("description", "") or ""
+                    if is_sports(title, desc):
+                        continue
+                    countries = assign_countries(title, desc)
+                    if not countries:
+                        continue
+                    for c in countries:
+                        all_stories.append({
+                            "title": title,
+                            "description": desc,
+                            "url": article.get("url", ""),
+                            "image_url": article.get("urlToImage", ""),
+                            "published_at": article.get("publishedAt", ""),
+                            "source": "Euronews",
+                            "source_id": "euronews",
+                            "country": c,
+                            "priority": classify_priority(title, desc),
+                            "relevance_score": compute_relevance(title, desc, c),
+                            "sources": ["Euronews"],
+                            "source_count": 1,
+                        })
+            elif resp.status_code == 429:
+                logger.warning("Rate limited on Euronews call. Will retry next cycle.")
+            else:
+                logger.warning(f"Euronews call returned {resp.status_code}: {resp.text[:200]}")
+        except Exception as e:
+            logger.error(f"Error fetching Euronews: {e}")
 
     all_stories = multi_source_boost(all_stories)
     all_stories = deduplicate_stories(all_stories)
