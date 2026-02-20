@@ -36,7 +36,8 @@ export default function NewsCard({ story, featured }) {
       target="_blank"
       rel="noopener noreferrer"
       data-testid="news-card"
-      className={`story-card group block rounded-sm border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-900 hover:border-zinc-700 transition-all duration-300 overflow-hidden ${
+      style={{ animationDelay: `${(featured ? 0 : 0.03) * (Math.random() * 3)}s` }}
+      className={`animate-fade-in-up group block rounded-sm border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-900 hover:border-zinc-700 transition-all duration-300 overflow-hidden ${
         featured ? "md:col-span-2" : ""
       } ${
         story.priority === "politics" ? "priority-politics" : ""
