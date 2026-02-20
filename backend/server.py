@@ -281,6 +281,9 @@ async def fetch_news_for_country(country: str, http_client: httpx.AsyncClient) -
                     "sources": ["Euronews"],
                     "source_count": 1,
                 })
+        elif resp.status_code == 429:
+            logger.warning(f"Rate limited for {country} (euronews). Waiting 5s...")
+            await asyncio.sleep(5)
     except Exception as e:
         logger.error(f"Error fetching from Euronews for {country}: {e}")
 
