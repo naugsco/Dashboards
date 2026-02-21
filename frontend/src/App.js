@@ -5,14 +5,14 @@ import Dashboard from "@/components/Dashboard";
 
 function App() {
   return (
-    <div className="min-h-screen bg-[#09090b]">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       <div className="noise-overlay" />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Dashboard />} />
         </Routes>
       </BrowserRouter>
-      <Toaster theme="dark" position="bottom-right" />
+      <Toaster theme="system" position="bottom-right" />
     </div>
   );
 }
