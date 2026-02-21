@@ -158,8 +158,8 @@ function PriorityFilter({ selected, onChange }) {
                 ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
                 : opt.value === "disaster"
                 ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                : "bg-zinc-100 text-zinc-900"
-              : "text-zinc-500 hover:text-zinc-300 border border-transparent"
+                : "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground border border-transparent"
           }`}
         >
           {opt.label}
