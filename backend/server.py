@@ -433,7 +433,7 @@ async def fetch_all_news():
                 title, desc = parsed["title"], parsed["description"]
                 if is_sports(title, desc):
                     continue
-                countries = assign_countries(title, desc)
+                countries = assign_countries(title, desc, broad_match=True)
                 if not countries:
                     continue
                 for c in countries:
