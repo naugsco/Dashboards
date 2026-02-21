@@ -58,12 +58,12 @@ const ALL_RELEVANT = new Set([
 
 function getHeatColor(count, maxCount, isSelected) {
   if (isSelected) return "#22c55e"; // green-500
-  if (count === 0) return "#7f1d1d"; // very dark red
+  if (count === 0) return "#991b1b"; // red-800
   const intensity = Math.min(count / maxCount, 1);
-  // Interpolate from dark red (#7f1d1d) to bright red (#ef4444)
-  const r = Math.round(127 + intensity * 112);
-  const g = Math.round(29 + intensity * 39);
-  const b = Math.round(29 + intensity * 39);
+  // Interpolate from dark red (#991b1b) to bright red (#ef4444)
+  const r = Math.round(153 + intensity * 86);
+  const g = Math.round(27 + intensity * 41);
+  const b = Math.round(27 + intensity * 41);
   return `rgb(${r}, ${g}, ${b})`;
 }
 
