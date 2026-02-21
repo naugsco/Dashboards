@@ -128,7 +128,7 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
             <Geographies geography={GEO_URL}>
               {({ geographies }) =>
                 geographies.map((geo) => {
-                  const id = geo.id;
+                  const id = String(geo.id);
                   const isTarget = TARGET_CODES.has(id);
                   const isContext = CONTEXT_CODES.has(id);
                   if (!isTarget && !isContext) return null;
