@@ -115,14 +115,13 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
           className="bg-slate-900/90 border border-slate-700 rounded-lg overflow-hidden transition-all duration-300"
         >
           <ComposableMap
-            projection="geoAzimuthalEqualArea"
+            projection="geoMercator"
             projectionConfig={{
-              center: [5, 56],
-              rotate: [-10, -54, 0],
-              scale: 620,
+              center: [10, 56],
+              scale: 500,
             }}
             width={900}
-            height={320}
+            height={400}
             style={{ width: "100%", height: "auto" }}
           >
             {/* Country shapes */}
