@@ -202,44 +202,45 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
                 >
                   {/* Outer glow ring */}
                   <circle
-                    r={radius + 4}
+                    r={radius + 3}
                     fill="none"
                     stroke={isSelected ? "#22c55e" : isHovered ? "#f59e0b" : color}
-                    strokeWidth={2}
-                    opacity={0.5}
+                    strokeWidth={1.5}
+                    opacity={0.6}
                   />
                   {/* Main dot */}
                   <circle
                     r={radius}
                     fill={isHovered ? "#f59e0b" : color}
                     stroke={isSelected ? "#22c55e" : "#ffffff"}
-                    strokeWidth={2}
+                    strokeWidth={1.5}
                   />
-                  {/* Story count */}
+                  {/* Story count inside circle */}
+                  {count > 0 && (
+                    <text
+                      textAnchor="middle"
+                      y={4}
+                      style={{
+                        fontFamily: "system-ui, sans-serif",
+                        fontSize: radius > 10 ? "10px" : "8px",
+                        fill: "#000",
+                        fontWeight: "700",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      {count}
+                    </text>
+                  )}
+                  {/* Country label below */}
                   <text
                     textAnchor="middle"
-                    y={1}
+                    y={radius + 16}
                     style={{
-                      fontFamily: "JetBrains Mono, monospace",
-                      fontSize: radius > 8 ? "9px" : "7px",
-                      fill: "#000",
-                      fontWeight: "bold",
+                      fontFamily: "system-ui, sans-serif",
+                      fontSize: "10px",
+                      fill: isSelected ? "#22c55e" : isHovered ? "#f59e0b" : "#e2e8f0",
+                      fontWeight: "600",
                       pointerEvents: "none",
-                    }}
-                  >
-                    {count > 0 ? count : ""}
-                  </text>
-                  {/* Country label */}
-                  <text
-                    textAnchor="middle"
-                    y={radius + 14}
-                    style={{
-                      fontFamily: "JetBrains Mono, monospace",
-                      fontSize: "9px",
-                      fill: isSelected ? "#22c55e" : isHovered ? "#f59e0b" : "#ffffff",
-                      fontWeight: isSelected ? "bold" : "600",
-                      pointerEvents: "none",
-                      textShadow: "0 1px 2px rgba(0,0,0,0.8)",
                     }}
                   >
                     {SHORT_NAMES[name]}
