@@ -108,7 +108,7 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
         <div
           data-testid="europe-map"
           className="bg-card/40 border border-border rounded-sm overflow-hidden transition-all duration-300"
-          style={{ maxHeight: 320 }}
+          style={{ maxHeight: 300 }}
         >
           <ComposableMap
             projection="geoAzimuthalEqualArea"
