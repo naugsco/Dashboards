@@ -226,28 +226,137 @@ def assign_countries(title: str, description: str) -> list:
     return matched if matched else []
 
 
+async def fetch_rss_feed(url: str, http_client: httpx.AsyncClient) -> list:
+    """Fetch and parse a single RSS feed."""
+    try:
+        resp = await http_client.get(url, timeout=15.0, follow_redirects=True)
+        if resp.status_code == 200:
+            feed = feedparser.parse(resp.text)
+            return feed.entries
+        else:
+            logger.warning(f"RSS feed {url} returned {resp.status_code}")
+    except Exception as e:
+        logger.error(f"Error fetching RSS feed {url}: {e}")
+    return []
+
+
+def parse_rss_entry(entry, source_name: str) -> dict:
+    """Convert an RSS feed entry into a story dict."""
+    title = entry.get("title", "") or ""
+    description = entry.get("summary", "") or entry.get("description", "") or ""
+    # Strip HTML tags from description
+    description = re.sub(r'<[^>]+>', '', description).strip()
+    link = entry.get("link", "") or ""
+    
+    # Parse published date
+    published = entry.get("published", "") or entry.get("updated", "") or ""
+    if hasattr(entry, "published_parsed") and entry.published_parsed:
+        try:
+            published = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc).isoformat()
+        except Exception:
+            pass
+    elif hasattr(entry, "updated_parsed") and entry.updated_parsed:
+        try:
+            published = datetime(*entry.updated_parsed[:6], tzinfo=timezone.utc).isoformat()
+        except Exception:
+            pass
+
+    # Get image URL from media content if available
+    image_url = ""
+    if hasattr(entry, "media_thumbnail") and entry.media_thumbnail:
+        image_url = entry.media_thumbnail[0].get("url", "")
+    elif hasattr(entry, "media_content") and entry.media_content:
+        image_url = entry.media_content[0].get("url", "")
+    elif hasattr(entry, "enclosures") and entry.enclosures:
+        for enc in entry.enclosures:
+            if enc.get("type", "").startswith("image"):
+                image_url = enc.get("href", "") or enc.get("url", "")
+                break
+
+    return {
+        "title": title,
+        "description": description[:500],
+        "url": link,
+        "image_url": image_url,
+        "published_at": published,
+        "source": source_name,
+        "source_id": source_name.lower().replace(" ", "-"),
+    }
+
+
 async def fetch_all_news():
     logger.info("Starting news fetch cycle...")
     all_stories = []
-    all_country_terms = []
-    for country, info in COUNTRIES.items():
-        all_country_terms.append(country)
-        all_country_terms.extend(info.get("keywords", [])[:2])
 
-    # Build a broad query with key terms (NewsAPI max ~500 chars)
-    # Use the most distinctive terms to stay within limits
+    # Build broad query for AP via NewsAPI
     key_terms = list(COUNTRIES.keys())
     query = " OR ".join(f'"{t}"' for t in key_terms)
 
     async with httpx.AsyncClient() as http_client:
-        # Call 1: AP + BBC
+
+        # === BBC RSS Feeds ===
+        bbc_seen_urls = set()
+        for feed_url in BBC_RSS_FEEDS:
+            entries = await fetch_rss_feed(feed_url, http_client)
+            for entry in entries:
+                parsed = parse_rss_entry(entry, "BBC")
+                if not parsed["title"] or parsed["url"] in bbc_seen_urls:
+                    continue
+                bbc_seen_urls.add(parsed["url"])
+                title, desc = parsed["title"], parsed["description"]
+                if is_sports(title, desc):
+                    continue
+                countries = assign_countries(title, desc)
+                if not countries:
+                    continue
+                for c in countries:
+                    all_stories.append({
+                        **parsed,
+                        "country": c,
+                        "priority": classify_priority(title, desc),
+                        "relevance_score": compute_relevance(title, desc, c),
+                        "sources": ["BBC"],
+                        "source_count": 1,
+                    })
+            await asyncio.sleep(0.3)
+        logger.info(f"BBC RSS: fetched {len(bbc_seen_urls)} unique articles, {sum(1 for s in all_stories if s['source']=='BBC')} country-matched stories")
+
+        # === Euronews RSS Feeds ===
+        euro_seen_urls = set()
+        euro_start = len(all_stories)
+        for feed_url in EURONEWS_RSS_FEEDS:
+            entries = await fetch_rss_feed(feed_url, http_client)
+            for entry in entries:
+                parsed = parse_rss_entry(entry, "Euronews")
+                if not parsed["title"] or parsed["url"] in euro_seen_urls:
+                    continue
+                euro_seen_urls.add(parsed["url"])
+                title, desc = parsed["title"], parsed["description"]
+                if is_sports(title, desc):
+                    continue
+                countries = assign_countries(title, desc)
+                if not countries:
+                    continue
+                for c in countries:
+                    all_stories.append({
+                        **parsed,
+                        "country": c,
+                        "priority": classify_priority(title, desc),
+                        "relevance_score": compute_relevance(title, desc, c),
+                        "sources": ["Euronews"],
+                        "source_count": 1,
+                    })
+            await asyncio.sleep(0.3)
+        euro_count = sum(1 for s in all_stories[euro_start:] if s['source'] == 'Euronews')
+        logger.info(f"Euronews RSS: fetched {len(euro_seen_urls)} unique articles, {euro_count} country-matched stories")
+
+        # === AP via NewsAPI ===
         try:
-            source_ids = ",".join(TRUSTED_SOURCES.keys())
             resp = await http_client.get(
                 f"{NEWS_API_BASE}/everything",
                 params={
                     "q": query,
-                    "sources": source_ids,
+                    "sources": "associated-press",
                     "language": "en",
                     "sortBy": "publishedAt",
                     "pageSize": 100,
@@ -257,58 +366,7 @@ async def fetch_all_news():
             )
             if resp.status_code == 200:
                 data = resp.json()
-                logger.info(f"AP/BBC returned {data.get('totalResults', 0)} results")
-                for article in data.get("articles", []):
-                    title = article.get("title", "") or ""
-                    desc = article.get("description", "") or ""
-                    if is_sports(title, desc):
-                        continue
-                    countries = assign_countries(title, desc)
-                    if not countries:
-                        continue
-                    source_id = article.get("source", {}).get("id", "")
-                    source_name = TRUSTED_SOURCES.get(source_id, article.get("source", {}).get("name", "Unknown"))
-                    for c in countries:
-                        all_stories.append({
-                            "title": title,
-                            "description": desc,
-                            "url": article.get("url", ""),
-                            "image_url": article.get("urlToImage", ""),
-                            "published_at": article.get("publishedAt", ""),
-                            "source": source_name,
-                            "source_id": source_id,
-                            "country": c,
-                            "priority": classify_priority(title, desc),
-                            "relevance_score": compute_relevance(title, desc, c),
-                            "sources": [source_name],
-                            "source_count": 1,
-                        })
-            elif resp.status_code == 429:
-                logger.warning("Rate limited on AP/BBC call. Will retry next cycle.")
-            else:
-                logger.warning(f"AP/BBC call returned {resp.status_code}: {resp.text[:200]}")
-        except Exception as e:
-            logger.error(f"Error fetching AP/BBC: {e}")
-
-        await asyncio.sleep(2)
-
-        # Call 2: Euronews
-        try:
-            resp = await http_client.get(
-                f"{NEWS_API_BASE}/everything",
-                params={
-                    "q": query,
-                    "domains": EURONEWS_DOMAIN,
-                    "language": "en",
-                    "sortBy": "publishedAt",
-                    "pageSize": 100,
-                    "apiKey": NEWS_API_KEY,
-                },
-                timeout=20.0
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                logger.info(f"Euronews returned {data.get('totalResults', 0)} results")
+                ap_count = 0
                 for article in data.get("articles", []):
                     title = article.get("title", "") or ""
                     desc = article.get("description", "") or ""
@@ -324,20 +382,22 @@ async def fetch_all_news():
                             "url": article.get("url", ""),
                             "image_url": article.get("urlToImage", ""),
                             "published_at": article.get("publishedAt", ""),
-                            "source": "Euronews",
-                            "source_id": "euronews",
+                            "source": "AP",
+                            "source_id": "associated-press",
                             "country": c,
                             "priority": classify_priority(title, desc),
                             "relevance_score": compute_relevance(title, desc, c),
-                            "sources": ["Euronews"],
+                            "sources": ["AP"],
                             "source_count": 1,
                         })
+                        ap_count += 1
+                logger.info(f"AP NewsAPI: {data.get('totalResults', 0)} results, {ap_count} country-matched stories")
             elif resp.status_code == 429:
-                logger.warning("Rate limited on Euronews call. Will retry next cycle.")
+                logger.warning("AP NewsAPI rate limited. BBC & Euronews RSS still available.")
             else:
-                logger.warning(f"Euronews call returned {resp.status_code}: {resp.text[:200]}")
+                logger.warning(f"AP NewsAPI returned {resp.status_code}")
         except Exception as e:
-            logger.error(f"Error fetching Euronews: {e}")
+            logger.error(f"Error fetching AP: {e}")
 
     all_stories = multi_source_boost(all_stories)
     all_stories = deduplicate_stories(all_stories)
