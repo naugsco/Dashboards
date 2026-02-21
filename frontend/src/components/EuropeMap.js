@@ -113,12 +113,12 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
           <ComposableMap
             projection="geoAzimuthalEqualArea"
             projectionConfig={{
-              center: [10, 58],
-              rotate: [-10, -52, 0],
-              scale: 600,
+              center: [5, 56],
+              rotate: [-10, -54, 0],
+              scale: 650,
             }}
             width={900}
-            height={320}
+            height={300}
             style={{ width: "100%", height: "auto" }}
           >
             <Geographies geography={GEO_URL}>
