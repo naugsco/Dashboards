@@ -17,9 +17,9 @@ export default function StatsPanel({ stats }) {
   return (
     <div data-testid="stats-panel" className="space-y-6 sticky top-24">
       {/* Source Distribution */}
-      <div className="bg-zinc-900/60 border border-zinc-800 rounded-sm p-5">
+      <div className="bg-card/60 border border-border rounded-sm p-5">
         <div className="flex items-center gap-2 mb-4">
-          <BarChart3 className="w-4 h-4 text-zinc-500" />
+          <BarChart3 className="w-4 h-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold tracking-tight">Source Distribution</h3>
         </div>
         <div className="space-y-3">
@@ -29,10 +29,10 @@ export default function StatsPanel({ stats }) {
             return (
               <div key={src.source} data-testid={`source-stat-${src.source.toLowerCase()}`}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-mono text-zinc-400">{src.source}</span>
-                  <span className="text-[10px] font-mono text-zinc-600">{src.count} ({pct}%)</span>
+                  <span className="text-xs font-mono text-muted-foreground">{src.source}</span>
+                  <span className="text-[10px] font-mono text-muted-foreground/60">{src.count} ({pct}%)</span>
                 </div>
-                <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-700 ${barColor}`}
                     style={{ width: `${(src.count / maxSourceCount) * 100}%` }}
@@ -44,12 +44,12 @@ export default function StatsPanel({ stats }) {
         </div>
       </div>
 
-      <Separator className="bg-zinc-800" />
+      <Separator />
 
       {/* Priority Breakdown */}
-      <div className="bg-zinc-900/60 border border-zinc-800 rounded-sm p-5">
+      <div className="bg-card/60 border border-border rounded-sm p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-4 h-4 text-zinc-500" />
+          <Shield className="w-4 h-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold tracking-tight">Priority Breakdown</h3>
         </div>
         <div className="space-y-2">
@@ -60,14 +60,14 @@ export default function StatsPanel({ stats }) {
               ) : p.priority === "disaster" ? (
                 <AlertTriangle className="w-3 h-3 text-blue-400" />
               ) : (
-                <Newspaper className="w-3 h-3 text-zinc-500" />
+                <Newspaper className="w-3 h-3 text-muted-foreground" />
               );
 
             return (
               <div key={p.priority} data-testid={`priority-stat-${p.priority}`} className="flex items-center justify-between py-1.5">
                 <div className="flex items-center gap-2">
                   {icon}
-                  <span className="text-xs text-zinc-400 capitalize">{p.priority}</span>
+                  <span className="text-xs text-muted-foreground capitalize">{p.priority}</span>
                 </div>
                 <Badge variant="secondary" className="text-[10px] font-mono">
                   {p.count}
@@ -78,19 +78,19 @@ export default function StatsPanel({ stats }) {
         </div>
       </div>
 
-      <Separator className="bg-zinc-800" />
+      <Separator />
 
       {/* Top Countries */}
-      <div className="bg-zinc-900/60 border border-zinc-800 rounded-sm p-5">
+      <div className="bg-card/60 border border-border rounded-sm p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Globe className="w-4 h-4 text-zinc-500" />
+          <Globe className="w-4 h-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold tracking-tight">Coverage by Country</h3>
         </div>
         <div className="space-y-1.5">
           {country_distribution.slice(0, 8).map((c) => (
             <div key={c.country} data-testid={`country-stat-${c.country?.toLowerCase().replace(/\s/g, "-")}`} className="flex items-center justify-between py-1">
-              <span className="text-xs text-zinc-400">{c.country}</span>
-              <span className="text-[10px] font-mono text-zinc-600">{c.count}</span>
+              <span className="text-xs text-muted-foreground">{c.country}</span>
+              <span className="text-[10px] font-mono text-muted-foreground/60">{c.count}</span>
             </div>
           ))}
         </div>
