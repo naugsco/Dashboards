@@ -223,14 +223,20 @@ def multi_source_boost(stories: list) -> list:
 
 def assign_countries(title: str, description: str) -> list:
     """Assign relevant countries to a story based on content."""
-    text = f"{title} {description}".lower()
+    text = f"{title} {description}"
+    text_lower = text.lower()
     matched = []
     for country, info in COUNTRIES.items():
-        if country.lower() in text:
+        if country.lower() in text_lower:
             matched.append(country)
             continue
         for kw in info.get("keywords", []):
-            if kw.lower() in text:
+            # Use word boundary matching for short keywords to avoid false matches
+            if len(kw) <= 3:
+                if re.search(r'\b' + re.escape(kw) + r'\b', text, re.IGNORECASE):
+                    matched.append(country)
+                    break
+            elif kw.lower() in text_lower:
                 matched.append(country)
                 break
     return matched if matched else []
