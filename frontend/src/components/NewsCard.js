@@ -78,14 +78,14 @@ export default function NewsCard({ story, featured, showImages = true }) {
                 </Badge>
               )}
             </div>
-            <h3 className="text-sm md:text-base font-semibold leading-snug text-zinc-100 group-hover:text-white transition-colors line-clamp-3">{story.title}</h3>
-            {story.description && <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2">{story.description}</p>}
-            <div className="mt-auto pt-2 flex items-center justify-between text-[10px] font-mono text-zinc-600">
+            <h3 className="text-sm md:text-base font-semibold leading-snug text-foreground group-hover:text-foreground transition-colors line-clamp-3">{story.title}</h3>
+            {story.description && <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{story.description}</p>}
+            <div className="mt-auto pt-2 flex items-center justify-between text-[10px] font-mono text-muted-foreground/60">
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{timeAgo(story.published_at)}</span>
-                <span data-testid="relevance-score" className="text-zinc-500">rel: {story.relevance_score?.toFixed(1)}</span>
+                <span data-testid="relevance-score" className="text-muted-foreground">rel: {story.relevance_score?.toFixed(1)}</span>
               </div>
-              <div className="flex items-center gap-1 text-zinc-600 group-hover:text-zinc-400 transition-colors">
+              <div className="flex items-center gap-1 text-muted-foreground/60 group-hover:text-muted-foreground transition-colors">
                 <ExternalLink className="w-3 h-3" /><span>Read</span>
               </div>
             </div>
@@ -103,14 +103,14 @@ export default function NewsCard({ story, featured, showImages = true }) {
                 </Badge>
               )}
             </div>
-            <h3 className="text-sm md:text-base font-semibold leading-snug text-zinc-100 group-hover:text-white transition-colors line-clamp-3">{story.title}</h3>
-            {story.description && <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2">{story.description}</p>}
-            <div className="mt-auto pt-2 flex items-center justify-between text-[10px] font-mono text-zinc-600">
+            <h3 className="text-sm md:text-base font-semibold leading-snug text-foreground group-hover:text-foreground transition-colors line-clamp-3">{story.title}</h3>
+            {story.description && <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{story.description}</p>}
+            <div className="mt-auto pt-2 flex items-center justify-between text-[10px] font-mono text-muted-foreground/60">
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{timeAgo(story.published_at)}</span>
-                <span data-testid="relevance-score" className="text-zinc-500">rel: {story.relevance_score?.toFixed(1)}</span>
+                <span data-testid="relevance-score" className="text-muted-foreground">rel: {story.relevance_score?.toFixed(1)}</span>
               </div>
-              <div className="flex items-center gap-1 text-zinc-600 group-hover:text-zinc-400 transition-colors">
+              <div className="flex items-center gap-1 text-muted-foreground/60 group-hover:text-muted-foreground transition-colors">
                 <ExternalLink className="w-3 h-3" /><span>Read</span>
               </div>
             </div>
