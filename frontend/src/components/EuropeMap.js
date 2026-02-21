@@ -139,8 +139,8 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
                       <Geography
                         key={geo.rsmKey}
                         geography={geo}
-                        fill="hsl(var(--muted) / 0.6)"
-                        stroke="hsl(var(--border))"
+                        fill="hsl(var(--muted) / 0.3)"
+                        stroke="hsl(var(--border) / 0.4)"
                         strokeWidth={0.3}
                         style={{
                           default: { outline: "none" },
