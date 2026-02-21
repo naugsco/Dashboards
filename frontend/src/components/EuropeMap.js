@@ -139,9 +139,9 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
                       <Geography
                         key={geo.rsmKey}
                         geography={geo}
-                        fill="hsl(var(--muted))"
+                        fill="hsl(var(--muted) / 0.6)"
                         stroke="hsl(var(--border))"
-                        strokeWidth={0.5}
+                        strokeWidth={0.3}
                         style={{
                           default: { outline: "none" },
                           hover: { outline: "none" },
