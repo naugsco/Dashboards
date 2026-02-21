@@ -283,14 +283,14 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
           </ComposableMap>
 
           {/* Legend */}
-          <div className="flex items-center justify-between px-4 py-2 border-t border-border">
-            <div className="flex items-center gap-4 text-[10px] font-mono text-muted-foreground">
+          <div className="flex items-center justify-between px-4 py-2 border-t border-slate-700 bg-slate-800/50">
+            <div className="flex items-center gap-4 text-[11px] font-mono text-slate-300">
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full" style={{ background: "#b91c1c" }} />
+                <div className="w-3 h-3 rounded-full" style={{ background: "#ef4444" }} />
                 <span>Fewer stories</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full" style={{ background: "#ff3333" }} />
+                <div className="w-3 h-3 rounded-full" style={{ background: "#eab308" }} />
                 <span>More stories</span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -298,7 +298,7 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
                 <span>Selected</span>
               </div>
             </div>
-            <span className="text-[10px] font-mono text-muted-foreground">
+            <span className="text-[11px] font-mono text-slate-400">
               Click a country to filter
             </span>
           </div>
