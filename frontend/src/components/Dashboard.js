@@ -125,7 +125,7 @@ export default function Dashboard() {
               </div>
               <PriorityFilter selected={selectedPriority} onChange={setSelectedPriority} />
             </div>
-            <NewsGrid stories={stories} />
+            <NewsGrid stories={stories} showImages={showImages} />
           </div>
 
           <aside className="w-full lg:w-80 shrink-0">
