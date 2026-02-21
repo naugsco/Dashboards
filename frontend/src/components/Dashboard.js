@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import Header from "@/components/Header";
+import EuropeMap from "@/components/EuropeMap";
 import CountryFilter from "@/components/CountryFilter";
 import NewsGrid from "@/components/NewsGrid";
 import StatsPanel from "@/components/StatsPanel";
