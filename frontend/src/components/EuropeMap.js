@@ -31,12 +31,24 @@ const CONTEXT_CODES = new Set([
 
 function getHeatColor(count, maxCount, isSelected) {
   if (isSelected) return "#22c55e";
-  if (count === 0) return "#b91c1c";
+  if (count === 0) return "#ef4444"; // Bright red for zero
   const intensity = Math.min(count / maxCount, 1);
-  const r = Math.round(185 + intensity * 70);
-  const g = Math.round(28 + intensity * 23);
-  const b = Math.round(28 + intensity * 23);
-  return `rgb(${r}, ${g}, ${b})`;
+  // Gradient from bright red (#ef4444) to bright orange (#f97316) to yellow (#eab308)
+  if (intensity < 0.5) {
+    // Red to orange
+    const t = intensity * 2;
+    const r = Math.round(239 + (249 - 239) * t);
+    const g = Math.round(68 + (115 - 68) * t);
+    const b = Math.round(68 + (22 - 68) * t);
+    return `rgb(${r}, ${g}, ${b})`;
+  } else {
+    // Orange to yellow
+    const t = (intensity - 0.5) * 2;
+    const r = Math.round(249 + (234 - 249) * t);
+    const g = Math.round(115 + (179 - 115) * t);
+    const b = Math.round(22 + (8 - 22) * t);
+    return `rgb(${r}, ${g}, ${b})`;
+  }
 }
 
 function getMarkerRadius(count, maxCount) {
