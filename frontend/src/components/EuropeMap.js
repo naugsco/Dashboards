@@ -160,8 +160,8 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
                           <Geography
                             geography={geo}
                             fill={isHovered && !isSelected ? "#f59e0b" : fillColor}
-                            stroke={isSelected ? "#22c55e" : isHovered ? "#f59e0b" : "rgba(255,255,255,0.2)"}
-                            strokeWidth={isSelected || isHovered ? 1.5 : 0.5}
+                            stroke={isSelected ? "#22c55e" : isHovered ? "#f59e0b" : "rgba(255,255,255,0.35)"}
+                            strokeWidth={isSelected ? 2 : isHovered ? 1.5 : 0.8}
                             onClick={() => {
                               if (selectedCountry === countryName) {
                                 onSelectCountry("all");
