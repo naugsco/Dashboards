@@ -92,9 +92,8 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
           <ComposableMap
             projection="geoMercator"
             projectionConfig={{
-              center: [15, 58],
+              center: [5, 54],
               scale: 450,
-              rotate: [-15, 0, 0],
             }}
             width={900}
             height={420}
