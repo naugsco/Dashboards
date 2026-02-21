@@ -32,7 +32,7 @@ NEWS_API_KEY = os.environ.get('NEWS_API_KEY', '')
 NEWS_API_BASE = "https://newsapi.org/v2"
 
 COUNTRIES = {
-    "United Kingdom": {"code": "gb", "keywords": ["UK", "Britain", "British", "England", "Scotland", "Wales", "London", "Westminster", "Downing Street"]},
+    "United Kingdom": {"code": "gb", "keywords": ["Britain", "British", "England", "Scotland", "Wales", "London", "Westminster", "Downing Street", "Starmer", "Sunak"]},
     "Ireland": {"code": "ie", "keywords": ["Irish", "Dublin", "Taoiseach", "Dail"]},
     "Portugal": {"code": "pt", "keywords": ["Portuguese", "Lisbon", "Lisboa"]},
     "Iceland": {"code": "is", "keywords": ["Icelandic", "Reykjavik"]},
