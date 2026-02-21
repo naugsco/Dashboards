@@ -52,9 +52,9 @@ function getHeatColor(count, maxCount, isSelected) {
 }
 
 function getMarkerRadius(count, maxCount) {
-  if (count === 0) return 4;
+  if (count === 0) return 6;
   const intensity = Math.min(count / maxCount, 1);
-  return 4 + intensity * 8; // 4px to 12px
+  return 6 + intensity * 10; // 6px to 16px - larger for better visibility
 }
 
 // Short display names for map labels
