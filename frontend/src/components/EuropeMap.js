@@ -163,8 +163,8 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
                       key={geo.rsmKey}
                       geography={geo}
                       fill={isHovered && !isSelected ? "#f59e0b" : fillColor}
-                      stroke={isSelected ? "#22c55e" : isHovered ? "#f59e0b" : "rgba(255,255,255,0.3)"}
-                      strokeWidth={isSelected ? 2 : isHovered ? 1.5 : 0.7}
+                      stroke={isSelected ? "#22c55e" : isHovered ? "#f59e0b" : "#ffffff"}
+                      strokeWidth={isSelected ? 2.5 : isHovered ? 2 : 1}
                       onClick={() => {
                         onSelectCountry(selectedCountry === countryName ? "all" : countryName);
                       }}
