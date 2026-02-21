@@ -58,12 +58,12 @@ const ALL_RELEVANT = new Set([
 
 function getHeatColor(count, maxCount, isSelected) {
   if (isSelected) return "#22c55e"; // green-500
-  if (count === 0) return "#991b1b"; // red-800
+  if (count === 0) return "#b91c1c"; // red-700 — visible even with 0 stories
   const intensity = Math.min(count / maxCount, 1);
-  // Interpolate from dark red (#991b1b) to bright red (#ef4444)
-  const r = Math.round(153 + intensity * 86);
-  const g = Math.round(27 + intensity * 41);
-  const b = Math.round(27 + intensity * 41);
+  // Interpolate from red-700 (#b91c1c) to bright red (#ff3333)
+  const r = Math.round(185 + intensity * 70);
+  const g = Math.round(28 + intensity * 23);
+  const b = Math.round(28 + intensity * 23);
   return `rgb(${r}, ${g}, ${b})`;
 }
 
