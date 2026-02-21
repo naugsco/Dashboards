@@ -138,14 +138,14 @@ h1, h2, h3, h4, h5, h6 {
     width: 6px;
 }
 ::-webkit-scrollbar-track {
-    background: #09090b;
+    background: hsl(var(--background));
 }
 ::-webkit-scrollbar-thumb {
-    background: #27272a;
+    background: hsl(var(--border));
     border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #3f3f46;
+    background: hsl(var(--muted-foreground));
 }
 
 /* Animations */
