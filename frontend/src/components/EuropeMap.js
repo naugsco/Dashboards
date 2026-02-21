@@ -201,20 +201,20 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
                   onMouseLeave={() => setHoveredCountry(null)}
                   style={{ cursor: "pointer" }}
                 >
-                  {/* Glow ring */}
+                  {/* Outer glow ring */}
                   <circle
-                    r={radius + 2}
+                    r={radius + 4}
                     fill="none"
                     stroke={isSelected ? "#22c55e" : isHovered ? "#f59e0b" : color}
-                    strokeWidth={1}
-                    opacity={0.4}
+                    strokeWidth={2}
+                    opacity={0.5}
                   />
                   {/* Main dot */}
                   <circle
                     r={radius}
                     fill={isHovered ? "#f59e0b" : color}
-                    stroke={isSelected ? "#22c55e" : "rgba(0,0,0,0.5)"}
-                    strokeWidth={1}
+                    stroke={isSelected ? "#22c55e" : "#ffffff"}
+                    strokeWidth={2}
                   />
                   {/* Story count */}
                   <text
@@ -222,8 +222,8 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
                     y={1}
                     style={{
                       fontFamily: "JetBrains Mono, monospace",
-                      fontSize: radius > 6 ? "7px" : "5px",
-                      fill: "#fff",
+                      fontSize: radius > 8 ? "9px" : "7px",
+                      fill: "#000",
                       fontWeight: "bold",
                       pointerEvents: "none",
                     }}
@@ -233,13 +233,14 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
                   {/* Country label */}
                   <text
                     textAnchor="middle"
-                    y={radius + 11}
+                    y={radius + 14}
                     style={{
                       fontFamily: "JetBrains Mono, monospace",
-                      fontSize: "7px",
-                      fill: isSelected ? "#22c55e" : isHovered ? "#f59e0b" : "hsl(var(--muted-foreground))",
-                      fontWeight: isSelected ? "bold" : "normal",
+                      fontSize: "9px",
+                      fill: isSelected ? "#22c55e" : isHovered ? "#f59e0b" : "#ffffff",
+                      fontWeight: isSelected ? "bold" : "600",
                       pointerEvents: "none",
+                      textShadow: "0 1px 2px rgba(0,0,0,0.8)",
                     }}
                   >
                     {SHORT_NAMES[name]}
