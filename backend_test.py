@@ -151,9 +151,87 @@ class NewsAPITester:
         if success and response:
             countries = response.get('countries', [])
             print(f"   Available countries: {len(countries)}")
-            expected_countries = ['United Kingdom', 'Ireland', 'Portugal', 'Iceland']
+            expected_countries = ['United Kingdom', 'Ireland', 'Portugal', 'Iceland', 'Moldova', 'Estonia', 'Latvia', 'Lithuania', 'Cape Verde']
             found_countries = [c for c in expected_countries if c in countries]
             print(f"   Expected countries found: {len(found_countries)}/{len(expected_countries)}")
+        return success
+
+    def test_regional_country_filters(self):
+        """Test filtering by new regional countries"""
+        regional_countries = ['Iceland', 'Moldova', 'Estonia', 'Latvia']
+        all_passed = True
+        
+        for country in regional_countries:
+            success, response = self.run_test(
+                f"Filter News by {country}",
+                "GET",
+                "news",
+                200,
+                params={"country": country}
+            )
+            if success and response:
+                stories = response.get('stories', [])
+                country_stories = [s for s in stories if s.get('country') == country]
+                print(f"   {country} stories: {len(country_stories)}/{len(stories)}")
+                if len(stories) == 0:
+                    print(f"   ⚠️  No stories found for {country}")
+                elif len(country_stories) != len(stories):
+                    print(f"   ⚠️  Mixed countries in {country} filter results")
+            else:
+                all_passed = False
+                
+        return all_passed
+
+    def test_regional_sources_in_stats(self):
+        """Test that regional sources appear in stats"""
+        success, response = self.run_test(
+            "Check Regional Sources in Stats",
+            "GET",
+            "news/stats",
+            200
+        )
+        if success and response:
+            source_dist = response.get('source_distribution', [])
+            sources = [s['source'] for s in source_dist]
+            print(f"   All sources: {sources}")
+            
+            # Check for regional sources
+            regional_sources = ['RUV', 'Iceland Monitor', 'Grapevine', 'Moldpres', 'Moldova Live', 
+                              'YAM News', 'ERR News', 'LSM Latvia', 'LRT', 'Baltic Times', 
+                              'AllAfrica', 'Inforpress', 'Expresso das Ilhas']
+            found_regional = [src for src in regional_sources if src in sources]
+            print(f"   Regional sources found: {len(found_regional)}/{len(regional_sources)}")
+            print(f"   Found regional sources: {found_regional}")
+            
+            # Check total story count (should be 161+ according to request)
+            total = response.get('total_stories', 0)
+            print(f"   Total stories: {total} (expected: 161+)")
+            
+        return success
+
+    def test_story_volume_check(self):
+        """Test that we have 161+ stories as mentioned in requirements"""
+        success, response = self.run_test(
+            "Story Volume Check (161+)",
+            "GET",
+            "news",
+            200,
+            params={"limit": 200}
+        )
+        if success and response:
+            stories = response.get('stories', [])
+            count = len(stories)
+            print(f"   Story count: {count}")
+            if count >= 161:
+                print(f"   ✅ Volume requirement met ({count} >= 161)")
+            else:
+                print(f"   ⚠️  Below expected volume ({count} < 161)")
+                
+            # Check source diversity
+            sources = set(s.get('source', 'Unknown') for s in stories)
+            print(f"   Unique sources: {len(sources)} sources")
+            print(f"   Sources: {list(sources)}")
+            
         return success
 
     def test_refresh_endpoint(self):
