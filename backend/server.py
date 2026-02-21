@@ -366,7 +366,7 @@ async def fetch_all_news():
     key_terms = list(COUNTRIES.keys())
     query = " OR ".join(f'"{t}"' for t in key_terms)
 
-    async with httpx.AsyncClient() as http_client:
+    async with httpx.AsyncClient(headers={"User-Agent": "Mozilla/5.0 (compatible; PulseNewsBot/1.0)"}) as http_client:
 
         # === BBC RSS Feeds ===
         bbc_seen_urls = set()
