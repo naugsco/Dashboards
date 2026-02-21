@@ -108,24 +108,20 @@ EURONEWS_RSS_FEEDS = [
 REGIONAL_RSS_FEEDS = [
     # Iceland
     ("https://www.ruv.is/rss/english", "RUV", "Iceland"),
-    ("https://icelandmonitor.mbl.is/rss/", "Iceland Monitor", "Iceland"),
+    ("https://www.icelandreview.com/feed/", "Iceland Review", "Iceland"),
     ("https://grapevine.is/feed/", "Grapevine", "Iceland"),
     # Moldova
-    ("https://www.moldpres.md/en/rss", "Moldpres", "Moldova"),
     ("https://moldovalive.md/feed/", "Moldova Live", "Moldova"),
     ("https://news.yam.md/en/rss", "YAM News", "Moldova"),
     # Estonia
     ("https://news.err.ee/rss", "ERR News", "Estonia"),
     # Latvia
-    ("https://eng.lsm.lv/rss/?lang=en", "LSM Latvia", "Latvia"),
-    # Lithuania
-    ("https://www.lrt.lt/en/rss", "LRT", "Lithuania"),
+    ("https://eng.lsm.lv/rss/", "LSM Latvia", "Latvia"),
+    # Lithuania — no working English RSS found; rely on Baltic Times + Euronews
     # Baltic States (shared)
     ("https://feeds.feedburner.com/TheBalticTimesNews", "Baltic Times", None),  # None = assign via content
     # Cape Verde
-    ("https://allafrica.com/capeverde/index.xml", "AllAfrica", "Cape Verde"),
-    ("https://inforpress.cv/en/feed", "Inforpress", "Cape Verde"),
-    ("https://expressodasilhas.cv/feed", "Expresso das Ilhas", "Cape Verde"),
+    ("https://expressodasilhas.cv/rss", "Expresso das Ilhas", "Cape Verde"),
 ]
 
 
