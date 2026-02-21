@@ -26,10 +26,10 @@ const PRIORITY_CONFIG = {
   general: { label: "General", color: "bg-zinc-500/15 text-zinc-400 border-zinc-500/20" },
 };
 
-export default function NewsCard({ story, featured }) {
+export default function NewsCard({ story, featured, showImages = true }) {
   const priorityConfig = PRIORITY_CONFIG[story.priority] || PRIORITY_CONFIG.general;
   const sourceColor = SOURCE_COLORS[story.source] || "bg-zinc-500/15 text-zinc-400 border-zinc-500/20";
-  const hasImage = !!story.image_url;
+  const hasImage = showImages && !!story.image_url;
 
   // Upgrade BBC thumbnail to higher resolution
   const imageUrl = story.image_url
