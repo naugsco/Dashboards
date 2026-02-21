@@ -256,6 +256,44 @@ async def fetch_rss_feed(url: str, http_client: httpx.AsyncClient) -> list:
     return []
 
 
+async def fetch_og_image(url: str, http_client: httpx.AsyncClient) -> str:
+    """Extract og:image from an article page."""
+    try:
+        resp = await http_client.get(url, timeout=8.0, follow_redirects=True)
+        if resp.status_code == 200:
+            match = re.search(r'<meta\s+property=["\']og:image["\']\s+content=["\']([^"\']+)["\']', resp.text[:15000])
+            if match:
+                return match.group(1)
+    except Exception:
+        pass
+    return ""
+
+
+async def enrich_missing_images(stories: list, http_client: httpx.AsyncClient):
+    """Fetch og:image for stories that don't have thumbnails."""
+    tasks = []
+    indices = []
+    for i, story in enumerate(stories):
+        if not story.get("image_url") and story.get("url"):
+            tasks.append(fetch_og_image(story["url"], http_client))
+            indices.append(i)
+    if not tasks:
+        return
+    # Process in batches of 10 to avoid overwhelming servers
+    batch_size = 10
+    for batch_start in range(0, len(tasks), batch_size):
+        batch = tasks[batch_start:batch_start + batch_size]
+        batch_indices = indices[batch_start:batch_start + batch_size]
+        results = await asyncio.gather(*batch, return_exceptions=True)
+        for idx, result in zip(batch_indices, results):
+            if isinstance(result, str) and result:
+                stories[idx]["image_url"] = result
+        if batch_start + batch_size < len(tasks):
+            await asyncio.sleep(0.5)
+    enriched = sum(1 for i in indices if stories[i].get("image_url"))
+    logger.info(f"Enriched {enriched}/{len(indices)} stories with og:image thumbnails")
+
+
 def parse_rss_entry(entry, source_name: str) -> dict:
     """Convert an RSS feed entry into a story dict."""
     title = entry.get("title", "") or ""
