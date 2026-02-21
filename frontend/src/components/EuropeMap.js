@@ -1,23 +1,23 @@
 import { useState, useMemo } from "react";
-import { ComposableMap, Geographies, Geography, Marker, Annotation } from "react-simple-maps";
+import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { ChevronDown, ChevronUp, Map } from "lucide-react";
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json";
 
-// ISO 3166-1 numeric codes + approximate centroids for our target countries
+// ISO 3166-1 numeric codes for our target countries
 const TARGET_COUNTRIES = {
-  "United Kingdom": { code: "826", coords: [-2, 54] },
-  "Ireland": { code: "372", coords: [-8, 53.5] },
-  "Portugal": { code: "620", coords: [-8.5, 39.5] },
-  "Iceland": { code: "352", coords: [-19, 65] },
-  "Moldova": { code: "498", coords: [29, 47] },
-  "Latvia": { code: "428", coords: [25, 57] },
-  "Lithuania": { code: "440", coords: [24, 55.5] },
-  "Estonia": { code: "233", coords: [25.5, 59] },
-  "Finland": { code: "246", coords: [26, 64] },
-  "Norway": { code: "578", coords: [10, 62] },
-  "Sweden": { code: "752", coords: [16, 62] },
-  "Cape Verde": { code: "132", coords: [-23.5, 15] },
+  "United Kingdom": { code: "826" },
+  "Ireland": { code: "372" },
+  "Portugal": { code: "620" },
+  "Iceland": { code: "352" },
+  "Moldova": { code: "498" },
+  "Latvia": { code: "428" },
+  "Lithuania": { code: "440" },
+  "Estonia": { code: "233" },
+  "Finland": { code: "246" },
+  "Norway": { code: "578" },
+  "Sweden": { code: "752" },
+  "Cape Verde": { code: "132" },
 };
 
 const TARGET_CODES = new Set(Object.values(TARGET_COUNTRIES).map(c => c.code));
@@ -31,18 +31,15 @@ const CONTEXT_CODES = new Set([
 
 function getHeatColor(count, maxCount, isSelected) {
   if (isSelected) return "#22c55e";
-  if (count === 0) return "#ef4444"; // Bright red for zero
+  if (count === 0) return "#ef4444";
   const intensity = Math.min(count / maxCount, 1);
-  // Gradient from bright red (#ef4444) to bright orange (#f97316) to yellow (#eab308)
   if (intensity < 0.5) {
-    // Red to orange
     const t = intensity * 2;
     const r = Math.round(239 + (249 - 239) * t);
     const g = Math.round(68 + (115 - 68) * t);
     const b = Math.round(68 + (22 - 68) * t);
     return `rgb(${r}, ${g}, ${b})`;
   } else {
-    // Orange to yellow
     const t = (intensity - 0.5) * 2;
     const r = Math.round(249 + (234 - 249) * t);
     const g = Math.round(115 + (179 - 115) * t);
@@ -50,28 +47,6 @@ function getHeatColor(count, maxCount, isSelected) {
     return `rgb(${r}, ${g}, ${b})`;
   }
 }
-
-function getMarkerRadius(count, maxCount) {
-  if (count === 0) return 6;
-  const intensity = Math.min(count / maxCount, 1);
-  return 6 + intensity * 10; // 6px to 16px - larger for better visibility
-}
-
-// Short display names for map labels
-const SHORT_NAMES = {
-  "United Kingdom": "UK",
-  "Ireland": "IRE",
-  "Portugal": "PRT",
-  "Iceland": "ISL",
-  "Moldova": "MDA",
-  "Latvia": "LVA",
-  "Lithuania": "LTU",
-  "Estonia": "EST",
-  "Finland": "FIN",
-  "Norway": "NOR",
-  "Sweden": "SWE",
-  "Cape Verde": "CPV",
-};
 
 export default function EuropeMap({ countryDistribution, selectedCountry, onSelectCountry }) {
   const [isExpanded, setIsExpanded] = useState(true);
