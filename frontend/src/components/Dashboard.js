@@ -18,8 +18,21 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [secondsUntilRefresh, setSecondsUntilRefresh] = useState(900);
+  const [showImages, setShowImages] = useState(true);
+  const [darkMode, setDarkMode] = useState(true);
   const timerRef = useRef(null);
   const refreshKeyRef = useRef(0);
+
+  // Apply theme class to document
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+    } else {
+      document.documentElement.classList.add("light");
+      document.documentElement.classList.remove("dark");
+    }
+  }, [darkMode]);
 
   const fetchStories = useCallback(async () => {
     try {
