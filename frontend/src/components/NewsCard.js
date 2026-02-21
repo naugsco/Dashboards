@@ -29,6 +29,12 @@ const PRIORITY_CONFIG = {
 export default function NewsCard({ story, featured }) {
   const priorityConfig = PRIORITY_CONFIG[story.priority] || PRIORITY_CONFIG.general;
   const sourceColor = SOURCE_COLORS[story.source] || "bg-zinc-500/15 text-zinc-400 border-zinc-500/20";
+  const hasImage = !!story.image_url;
+
+  // Upgrade BBC thumbnail to higher resolution
+  const imageUrl = story.image_url
+    ? story.image_url.replace("/standard/240/", "/standard/624/")
+    : "";
 
   return (
     <a
@@ -45,72 +51,72 @@ export default function NewsCard({ story, featured }) {
         story.priority === "disaster" ? "priority-disaster" : ""
       }`}
     >
-      <div className="flex flex-col h-full">
-        {story.image_url && featured && (
-          <div className="relative w-full h-48 overflow-hidden">
+      {hasImage ? (
+        <div className={`flex ${featured ? "flex-col" : "flex-row"} h-full`}>
+          <div className={`relative overflow-hidden shrink-0 ${
+            featured ? "w-full h-52" : "w-28 sm:w-36 min-h-full"
+          }`}>
             <img
-              src={story.image_url}
+              src={imageUrl}
               alt=""
               className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
               loading="lazy"
-              onError={(e) => { e.target.style.display = "none"; }}
+              onError={(e) => { e.target.parentElement.style.display = "none"; }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/80 to-transparent" />
-          </div>
-        )}
-
-        <div className="p-4 flex flex-col flex-1 gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge
-              data-testid={`source-badge-${story.source.toLowerCase()}`}
-              className={`text-[10px] font-mono uppercase tracking-wider rounded-sm border ${sourceColor}`}
-            >
-              {story.source}
-            </Badge>
-            <Badge
-              data-testid={`priority-badge-${story.priority}`}
-              className={`text-[10px] font-mono uppercase tracking-wider rounded-sm border ${priorityConfig.color}`}
-            >
-              {priorityConfig.label}
-            </Badge>
-            {story.source_count > 1 && (
-              <Badge
-                data-testid="multi-source-badge"
-                className="text-[10px] font-mono rounded-sm border bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
-              >
-                <Layers className="w-2.5 h-2.5 mr-1" />
-                {story.source_count} sources
-              </Badge>
+            {featured && (
+              <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/80 to-transparent" />
             )}
           </div>
 
-          <h3 className="text-sm md:text-base font-semibold leading-snug text-zinc-100 group-hover:text-white transition-colors line-clamp-3">
-            {story.title}
-          </h3>
-
-          {story.description && (
-            <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2">
-              {story.description}
-            </p>
-          )}
-
-          <div className="mt-auto pt-2 flex items-center justify-between text-[10px] font-mono text-zinc-600">
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {timeAgo(story.published_at)}
-              </span>
-              <span data-testid="relevance-score" className="text-zinc-500">
-                rel: {story.relevance_score?.toFixed(1)}
-              </span>
+          <div className="p-4 flex flex-col flex-1 gap-3 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge data-testid={`source-badge-${story.source.toLowerCase()}`} className={`text-[10px] font-mono uppercase tracking-wider rounded-sm border ${sourceColor}`}>{story.source}</Badge>
+              <Badge data-testid={`priority-badge-${story.priority}`} className={`text-[10px] font-mono uppercase tracking-wider rounded-sm border ${priorityConfig.color}`}>{priorityConfig.label}</Badge>
+              {story.source_count > 1 && (
+                <Badge data-testid="multi-source-badge" className="text-[10px] font-mono rounded-sm border bg-emerald-500/15 text-emerald-400 border-emerald-500/20">
+                  <Layers className="w-2.5 h-2.5 mr-1" />{story.source_count} sources
+                </Badge>
+              )}
             </div>
-            <div className="flex items-center gap-1 text-zinc-600 group-hover:text-zinc-400 transition-colors">
-              <ExternalLink className="w-3 h-3" />
-              <span>Read</span>
+            <h3 className="text-sm md:text-base font-semibold leading-snug text-zinc-100 group-hover:text-white transition-colors line-clamp-3">{story.title}</h3>
+            {story.description && <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2">{story.description}</p>}
+            <div className="mt-auto pt-2 flex items-center justify-between text-[10px] font-mono text-zinc-600">
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{timeAgo(story.published_at)}</span>
+                <span data-testid="relevance-score" className="text-zinc-500">rel: {story.relevance_score?.toFixed(1)}</span>
+              </div>
+              <div className="flex items-center gap-1 text-zinc-600 group-hover:text-zinc-400 transition-colors">
+                <ExternalLink className="w-3 h-3" /><span>Read</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex flex-col h-full">
+          <div className="p-4 flex flex-col flex-1 gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge data-testid={`source-badge-${story.source.toLowerCase()}`} className={`text-[10px] font-mono uppercase tracking-wider rounded-sm border ${sourceColor}`}>{story.source}</Badge>
+              <Badge data-testid={`priority-badge-${story.priority}`} className={`text-[10px] font-mono uppercase tracking-wider rounded-sm border ${priorityConfig.color}`}>{priorityConfig.label}</Badge>
+              {story.source_count > 1 && (
+                <Badge data-testid="multi-source-badge" className="text-[10px] font-mono rounded-sm border bg-emerald-500/15 text-emerald-400 border-emerald-500/20">
+                  <Layers className="w-2.5 h-2.5 mr-1" />{story.source_count} sources
+                </Badge>
+              )}
+            </div>
+            <h3 className="text-sm md:text-base font-semibold leading-snug text-zinc-100 group-hover:text-white transition-colors line-clamp-3">{story.title}</h3>
+            {story.description && <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2">{story.description}</p>}
+            <div className="mt-auto pt-2 flex items-center justify-between text-[10px] font-mono text-zinc-600">
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{timeAgo(story.published_at)}</span>
+                <span data-testid="relevance-score" className="text-zinc-500">rel: {story.relevance_score?.toFixed(1)}</span>
+              </div>
+              <div className="flex items-center gap-1 text-zinc-600 group-hover:text-zinc-400 transition-colors">
+                <ExternalLink className="w-3 h-3" /><span>Read</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </a>
   );
 }
