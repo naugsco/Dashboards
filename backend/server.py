@@ -122,6 +122,15 @@ REGIONAL_RSS_FEEDS = [
     ("https://feeds.feedburner.com/TheBalticTimesNews", "Baltic Times", None),  # None = assign via content
     # Cape Verde
     ("https://expressodasilhas.cv/rss", "Expresso das Ilhas", "Cape Verde"),
+    # Portugal
+    ("https://www.portugalresident.com/feed/", "Portugal Resident", "Portugal"),
+    ("https://www.theportugalnews.com/rss", "The Portugal News", "Portugal"),
+    # Norway
+    ("https://feeds.thelocal.com/rss/no", "The Local Norway", "Norway"),
+    # Sweden
+    ("https://feeds.thelocal.com/rss/se", "The Local Sweden", "Sweden"),
+    # Finland
+    ("https://feeds.yle.fi/uutiset/v1/recent.rss?publisherIds=YLE_NEWS&language=en", "Yle News", "Finland"),
 ]
 
 
