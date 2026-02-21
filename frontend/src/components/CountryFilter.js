@@ -43,8 +43,8 @@ export default function CountryFilter({ selectedCountry, onSelectCountry, countr
             onClick={() => onSelectCountry("all")}
             className={`shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-sm transition-all duration-200 ${
               selectedCountry === "all"
-                ? "bg-zinc-100 text-zinc-900"
-                : "bg-zinc-900 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 border border-zinc-800"
+                ? "bg-primary text-primary-foreground"
+                : "bg-card text-muted-foreground hover:text-foreground hover:bg-secondary border border-border"
             }`}
           >
             All
