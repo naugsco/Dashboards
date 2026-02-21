@@ -120,6 +120,10 @@ REGIONAL_RSS_FEEDS = [
     # Lithuania — no working English RSS found; rely on Baltic Times + Euronews
     # Baltic States (shared)
     ("https://feeds.feedburner.com/TheBalticTimesNews", "Baltic Times", None),  # None = assign via content
+    # Ireland
+    ("https://www.irishcentral.com/feeds/section-articles.atom", "Irish Central", "Ireland"),
+    ("https://www.irishmirror.ie/?service=rss", "Irish Mirror", "Ireland"),
+    ("https://www.irishnews.com/arc/outboundfeeds/rss/", "Irish News", "Ireland"),
     # Cape Verde
     ("https://expressodasilhas.cv/rss", "Expresso das Ilhas", "Cape Verde"),
     # Portugal
