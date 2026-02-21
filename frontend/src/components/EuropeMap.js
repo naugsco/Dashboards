@@ -195,56 +195,60 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
                 <Marker
                   key={name}
                   coordinates={data.coords}
-                  onClick={() => onSelectCountry(selectedCountry === name ? "all" : name)}
-                  onMouseEnter={() => setHoveredCountry(name)}
-                  onMouseLeave={() => setHoveredCountry(null)}
                   style={{ cursor: "pointer" }}
                 >
-                  {/* Outer glow ring */}
-                  <circle
-                    r={radius + 3}
-                    fill="none"
-                    stroke={isSelected ? "#22c55e" : isHovered ? "#f59e0b" : color}
-                    strokeWidth={1.5}
-                    opacity={0.6}
-                  />
-                  {/* Main dot */}
-                  <circle
-                    r={radius}
-                    fill={isHovered ? "#f59e0b" : color}
-                    stroke={isSelected ? "#22c55e" : "#ffffff"}
-                    strokeWidth={1.5}
-                  />
-                  {/* Story count inside circle */}
-                  {count > 0 && (
+                  <g
+                    onClick={() => onSelectCountry(selectedCountry === name ? "all" : name)}
+                    onMouseEnter={() => setHoveredCountry(name)}
+                    onMouseLeave={() => setHoveredCountry(null)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    {/* Outer glow ring */}
+                    <circle
+                      r={radius + 3}
+                      fill="none"
+                      stroke={isSelected ? "#22c55e" : isHovered ? "#f59e0b" : color}
+                      strokeWidth={1.5}
+                      opacity={0.6}
+                    />
+                    {/* Main dot */}
+                    <circle
+                      r={radius}
+                      fill={isHovered ? "#f59e0b" : color}
+                      stroke={isSelected ? "#22c55e" : "#ffffff"}
+                      strokeWidth={1.5}
+                    />
+                    {/* Story count inside circle */}
+                    {count > 0 && (
+                      <text
+                        textAnchor="middle"
+                        y={4}
+                        style={{
+                          fontFamily: "system-ui, sans-serif",
+                          fontSize: radius > 10 ? "10px" : "8px",
+                          fill: "#000",
+                          fontWeight: "700",
+                          pointerEvents: "none",
+                        }}
+                      >
+                        {count}
+                      </text>
+                    )}
+                    {/* Country label below */}
                     <text
                       textAnchor="middle"
-                      y={4}
+                      y={radius + 16}
                       style={{
                         fontFamily: "system-ui, sans-serif",
-                        fontSize: radius > 10 ? "10px" : "8px",
-                        fill: "#000",
-                        fontWeight: "700",
+                        fontSize: "10px",
+                        fill: isSelected ? "#22c55e" : isHovered ? "#f59e0b" : "#e2e8f0",
+                        fontWeight: "600",
                         pointerEvents: "none",
                       }}
                     >
-                      {count}
+                      {SHORT_NAMES[name]}
                     </text>
-                  )}
-                  {/* Country label below */}
-                  <text
-                    textAnchor="middle"
-                    y={radius + 16}
-                    style={{
-                      fontFamily: "system-ui, sans-serif",
-                      fontSize: "10px",
-                      fill: isSelected ? "#22c55e" : isHovered ? "#f59e0b" : "#e2e8f0",
-                      fontWeight: "600",
-                      pointerEvents: "none",
-                    }}
-                  >
-                    {SHORT_NAMES[name]}
-                  </text>
+                  </g>
                 </Marker>
               );
             })}
