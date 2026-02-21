@@ -260,6 +260,9 @@ def main():
         tester.test_priority_filter,
         tester.test_news_stats,
         tester.test_countries_endpoint,
+        tester.test_regional_country_filters,
+        tester.test_regional_sources_in_stats,
+        tester.test_story_volume_check,
         tester.test_refresh_endpoint,
     ]
     
