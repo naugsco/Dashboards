@@ -112,7 +112,7 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
       {isExpanded && (
         <div
           data-testid="europe-map"
-          className="bg-card/40 border border-border rounded-sm overflow-hidden transition-all duration-300"
+          className="bg-slate-900/90 border border-slate-700 rounded-lg overflow-hidden transition-all duration-300"
         >
           <ComposableMap
             projection="geoAzimuthalEqualArea"
