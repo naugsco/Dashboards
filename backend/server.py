@@ -453,6 +453,9 @@ async def fetch_all_news():
         except Exception as e:
             logger.error(f"Error fetching AP: {e}")
 
+        # === Enrich missing thumbnails via og:image ===
+        await enrich_missing_images(all_stories, http_client)
+
     all_stories = multi_source_boost(all_stories)
     all_stories = deduplicate_stories(all_stories)
     all_stories = enforce_source_diversity(all_stories)
