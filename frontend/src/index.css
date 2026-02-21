@@ -148,6 +148,18 @@ h1, h2, h3, h4, h5, h6 {
     background: hsl(var(--muted-foreground));
 }
 
+
+/* Europe Map SVG pointer events */
+[data-testid="europe-map"] svg path {
+    pointer-events: auto !important;
+}
+[data-testid="europe-map"] svg g {
+    pointer-events: auto !important;
+}
+[data-testid="europe-map"] svg circle {
+    pointer-events: auto !important;
+}
+
 /* Animations */
 @keyframes fade-in-up {
     from {
