@@ -99,6 +99,10 @@ export default function Dashboard() {
         refreshing={refreshing}
         totalStories={stats?.total_stories || 0}
         refreshKey={refreshKeyRef.current}
+        showImages={showImages}
+        onToggleImages={setShowImages}
+        darkMode={darkMode}
+        onToggleDarkMode={() => setDarkMode((prev) => !prev)}
       />
 
       <div className="max-w-[1400px] mx-auto px-4 md:px-8 pb-16">
