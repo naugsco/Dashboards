@@ -268,12 +268,12 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
                 const radius = getMarkerRadius(count, maxCount);
                 return (
                   <>
-                    <circle r={radius + 2} fill="none" stroke={isSelected ? "#22c55e" : color} strokeWidth={1} opacity={0.4} />
-                    <circle r={radius} fill={isHovered ? "#f59e0b" : color} stroke={isSelected ? "#22c55e" : "rgba(0,0,0,0.5)"} strokeWidth={1} />
-                    <text textAnchor="middle" y={1} style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "6px", fill: "#fff", fontWeight: "bold", pointerEvents: "none" }}>
+                    <circle r={radius + 4} fill="none" stroke={isSelected ? "#22c55e" : color} strokeWidth={2} opacity={0.5} />
+                    <circle r={radius} fill={isHovered ? "#f59e0b" : color} stroke={isSelected ? "#22c55e" : "#ffffff"} strokeWidth={2} />
+                    <text textAnchor="middle" y={1} style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "8px", fill: "#000", fontWeight: "bold", pointerEvents: "none" }}>
                       {count > 0 ? count : ""}
                     </text>
-                    <text textAnchor="middle" y={radius + 11} style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "7px", fill: isSelected ? "#22c55e" : "hsl(var(--muted-foreground))", pointerEvents: "none" }}>
+                    <text textAnchor="middle" y={radius + 14} style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "9px", fill: isSelected ? "#22c55e" : "#ffffff", fontWeight: "600", pointerEvents: "none", textShadow: "0 1px 2px rgba(0,0,0,0.8)" }}>
                       CPV
                     </text>
                   </>
