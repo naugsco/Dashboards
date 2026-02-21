@@ -117,11 +117,11 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
           <ComposableMap
             projection="geoMercator"
             projectionConfig={{
-              center: [10, 56],
-              scale: 500,
+              center: [5, 54],
+              scale: 450,
             }}
             width={900}
-            height={400}
+            height={420}
             style={{ width: "100%", height: "auto" }}
           >
             {/* Country shapes */}
