@@ -259,9 +259,6 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
             </Marker>
             <Marker
               coordinates={[-23, 32]}
-              onClick={() => onSelectCountry(selectedCountry === "Cape Verde" ? "all" : "Cape Verde")}
-              onMouseEnter={() => setHoveredCountry("Cape Verde")}
-              onMouseLeave={() => setHoveredCountry(null)}
               style={{ cursor: "pointer" }}
             >
               {(() => {
@@ -271,7 +268,12 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
                 const color = getHeatColor(count, maxCount, isSelected);
                 const radius = getMarkerRadius(count, maxCount);
                 return (
-                  <>
+                  <g
+                    onClick={() => onSelectCountry(selectedCountry === "Cape Verde" ? "all" : "Cape Verde")}
+                    onMouseEnter={() => setHoveredCountry("Cape Verde")}
+                    onMouseLeave={() => setHoveredCountry(null)}
+                    style={{ cursor: "pointer" }}
+                  >
                     <circle r={radius + 3} fill="none" stroke={isSelected ? "#22c55e" : color} strokeWidth={1.5} opacity={0.6} />
                     <circle r={radius} fill={isHovered ? "#f59e0b" : color} stroke={isSelected ? "#22c55e" : "#ffffff"} strokeWidth={1.5} />
                     {count > 0 && (
@@ -282,7 +284,7 @@ export default function EuropeMap({ countryDistribution, selectedCountry, onSele
                     <text textAnchor="middle" y={radius + 16} style={{ fontFamily: "system-ui, sans-serif", fontSize: "10px", fill: isSelected ? "#22c55e" : "#e2e8f0", fontWeight: "600", pointerEvents: "none" }}>
                       CPV
                     </text>
-                  </>
+                  </g>
                 );
               })()}
             </Marker>
