@@ -131,6 +131,7 @@ REGIONAL_RSS_FEEDS = [
     ("https://feeds.thelocal.com/rss/se", "The Local Sweden", "Sweden"),
     # Finland
     ("https://feeds.yle.fi/uutiset/v1/recent.rss?publisherIds=YLE_NEWS&language=en", "Yle News", "Finland"),
+    ("https://finlandtoday.fi/feed/", "Finland Today", "Finland"),
 ]
 
 
