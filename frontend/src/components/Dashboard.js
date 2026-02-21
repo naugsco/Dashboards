@@ -126,7 +126,7 @@ export default function Dashboard() {
                 <h2 className="text-xl md:text-2xl font-medium tracking-tight">
                   {selectedCountry === "all" ? "All Stories" : selectedCountry}
                 </h2>
-                <span data-testid="story-count" className="font-mono text-sm text-zinc-500">
+                <span data-testid="story-count" className="font-mono text-sm text-muted-foreground">
                   {stories.length} stories
                 </span>
               </div>
