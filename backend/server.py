@@ -255,25 +255,64 @@ def multi_source_boost(stories: list) -> list:
     return boosted
 
 
-def assign_countries(title: str, description: str) -> list:
-    """Assign relevant countries to a story based on content."""
+# Broad European terms — stories with these get assigned to relevant member countries
+EU_MEMBERS = ["Ireland", "Portugal", "Latvia", "Lithuania", "Estonia", "Finland", "Sweden"]
+NATO_MEMBERS = ["United Kingdom", "Iceland", "Portugal", "Norway", "Latvia", "Lithuania", "Estonia", "Finland", "Sweden"]
+NORDIC_COUNTRIES = ["Iceland", "Finland", "Norway", "Sweden"]
+BALTIC_COUNTRIES = ["Latvia", "Lithuania", "Estonia"]
+EUROPEAN_ALL = list(COUNTRIES.keys())
+
+BROAD_EUROPEAN_KEYWORDS = {
+    "european union": EU_MEMBERS,
+    "european commission": EU_MEMBERS,
+    "european council": EU_MEMBERS,
+    "european parliament": EU_MEMBERS,
+    "eu summit": EU_MEMBERS,
+    "eu member": EU_MEMBERS,
+    "brussels": EU_MEMBERS,
+    "nato": NATO_MEMBERS,
+    "nato alliance": NATO_MEMBERS,
+    "atlantic alliance": NATO_MEMBERS,
+    "nordic": NORDIC_COUNTRIES,
+    "scandinavian": ["Norway", "Sweden", "Finland", "Iceland"],
+    "scandinavia": ["Norway", "Sweden", "Finland", "Iceland"],
+    "baltic": BALTIC_COUNTRIES,
+    "baltic states": BALTIC_COUNTRIES,
+}
+
+
+def assign_countries(title: str, description: str, broad_match: bool = False) -> list:
+    """Assign relevant countries to a story based on content.
+    
+    If broad_match=True, also match broad European terms (EU, NATO, etc.)
+    and assign to relevant member countries.
+    """
     text = f"{title} {description}"
     text_lower = text.lower()
-    matched = []
+    matched = set()
+
+    # Direct country/keyword matching
     for country, info in COUNTRIES.items():
         if country.lower() in text_lower:
-            matched.append(country)
+            matched.add(country)
             continue
         for kw in info.get("keywords", []):
-            # Use word boundary matching for short keywords to avoid false matches
             if len(kw) <= 3:
                 if re.search(r'\b' + re.escape(kw) + r'\b', text, re.IGNORECASE):
-                    matched.append(country)
+                    matched.add(country)
                     break
             elif kw.lower() in text_lower:
-                matched.append(country)
+                matched.add(country)
                 break
-    return matched if matched else []
+
+    # Broad European term matching (only for AP/BBC/Euronews)
+    if broad_match and not matched:
+        for keyword, countries in BROAD_EUROPEAN_KEYWORDS.items():
+            if keyword in text_lower:
+                # Add all relevant member countries, but with lower relevance
+                matched.update(countries)
+
+    return list(matched) if matched else []
 
 
 async def fetch_rss_feed(url: str, http_client: httpx.AsyncClient) -> list:
