@@ -90,6 +90,20 @@ TRUSTED_SOURCES = {
 }
 EURONEWS_DOMAIN = "euronews.com"
 
+BBC_RSS_FEEDS = [
+    "https://feeds.bbci.co.uk/news/rss.xml?edition=int",
+    "https://feeds.bbci.co.uk/news/rss.xml",
+    "https://feeds.bbci.co.uk/news/world/rss.xml",
+    "https://feeds.bbci.co.uk/news/world/europe/rss.xml",
+]
+
+EURONEWS_RSS_FEEDS = [
+    "https://www.euronews.com/rss",
+    "https://www.euronews.com/rss?level=vertical&name=news",
+    "https://www.euronews.com/rss?level=program&name=europe-news",
+    "https://www.euronews.com/rss?level=vertical&name=business",
+]
+
 
 def is_sports(title: str, description: str) -> bool:
     text = f"{title} {description}".lower()
