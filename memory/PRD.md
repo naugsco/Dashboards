@@ -4,9 +4,14 @@
 Dashboard showing top news stories for UK, Ireland, Portugal, Iceland, Moldova, Latvia, Lithuania, Estonia, Finland, Norway, Sweden, Cape Verde. Sources: AP, BBC, Euronews. Dark theme, auto-refresh, no auth. Backend updates every 15 min. Sports filtered. Politics & disasters prioritized. Deduplication + multi-source boosting + source diversity.
 
 ## Architecture
-- **Backend**: FastAPI + MongoDB + NewsAPI.org (2 API calls per cycle)
+- **Backend**: FastAPI + MongoDB + NewsAPI.org (AP only, 1 API call) + BBC RSS (4 feeds) + Euronews RSS (4 feeds)
 - **Frontend**: React + Tailwind + Shadcn UI
-- **Data Flow**: Backend fetches from NewsAPI every 15min -> processes/deduplicates/scores -> stores in MongoDB -> Frontend polls via REST API
+- **Data Flow**: Backend fetches from RSS feeds + NewsAPI every 15min -> processes/deduplicates/scores -> stores in MongoDB -> Frontend polls via REST API
+
+## Data Sources
+- **BBC**: 4 RSS feeds (International, UK Edition, World, Europe)
+- **Euronews**: 4 RSS feeds (All Latest, News, My Europe, Business)
+- **AP**: NewsAPI.org (1 API call per cycle)
 
 ## User Personas
 - News-conscious professionals monitoring European affairs
