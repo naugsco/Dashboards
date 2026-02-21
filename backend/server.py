@@ -428,6 +428,44 @@ async def fetch_all_news():
         euro_count = sum(1 for s in all_stories[euro_start:] if s['source'] == 'Euronews')
         logger.info(f"Euronews RSS: fetched {len(euro_seen_urls)} unique articles, {euro_count} country-matched stories")
 
+        # === Regional RSS Feeds (for less-covered countries) ===
+        regional_seen_urls = set()
+        regional_start = len(all_stories)
+        for feed_url, source_label, target_country in REGIONAL_RSS_FEEDS:
+            entries = await fetch_rss_feed(feed_url, http_client)
+            for entry in entries:
+                parsed = parse_rss_entry(entry, source_label)
+                if not parsed["title"] or parsed["url"] in regional_seen_urls:
+                    continue
+                regional_seen_urls.add(parsed["url"])
+                title, desc = parsed["title"], parsed["description"]
+                if is_sports(title, desc):
+                    continue
+                if target_country:
+                    # Fixed country assignment for country-specific feeds
+                    countries = [target_country]
+                else:
+                    # Baltic Times etc — detect from content
+                    countries = assign_countries(title, desc)
+                    if not countries:
+                        # For Baltic Times, default to all 3 Baltic states if no match
+                        if "baltic" in source_label.lower():
+                            countries = ["Latvia", "Lithuania", "Estonia"]
+                        else:
+                            continue
+                for c in countries:
+                    all_stories.append({
+                        **parsed,
+                        "country": c,
+                        "priority": classify_priority(title, desc),
+                        "relevance_score": compute_relevance(title, desc, c),
+                        "sources": [source_label],
+                        "source_count": 1,
+                    })
+            await asyncio.sleep(0.3)
+        regional_count = len(all_stories) - regional_start
+        logger.info(f"Regional RSS: fetched {len(regional_seen_urls)} unique articles, {regional_count} country-matched stories")
+
         # === AP via NewsAPI ===
         try:
             resp = await http_client.get(
