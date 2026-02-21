@@ -107,6 +107,12 @@ export default function Dashboard() {
       />
 
       <div className="max-w-[1400px] mx-auto px-4 md:px-8 pb-16">
+        <EuropeMap
+          countryDistribution={stats?.country_distribution || []}
+          selectedCountry={selectedCountry}
+          onSelectCountry={setSelectedCountry}
+        />
+
         <CountryFilter
           selectedCountry={selectedCountry}
           onSelectCountry={setSelectedCountry}
