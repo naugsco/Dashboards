@@ -107,6 +107,16 @@ EURONEWS_RSS_FEEDS = [
 
 def is_sports(title: str, description: str) -> bool:
     text = f"{title} {description}".lower()
+    # Single strong sports keyword = sports
+    strong_sports = ["premier league", "champions league", "world cup", "six nations",
+                     "grand prix", "formula 1", "super bowl", "wimbledon", "roland garros",
+                     "ballon d'or", "fifa", "uefa", "nfl", "nba", "mlb", "nhl",
+                     "la liga", "serie a", "bundesliga", "ligue 1", "europa league",
+                     "tour de france", "ufc", "mma"]
+    for kw in strong_sports:
+        if kw in text:
+            return True
+    # Two or more general sports keywords = sports
     count = sum(1 for kw in SPORTS_KEYWORDS if kw in text)
     return count >= 2
 
