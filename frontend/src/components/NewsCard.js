@@ -64,7 +64,7 @@ export default function NewsCard({ story, featured, showImages = true }) {
               onError={(e) => { e.target.parentElement.style.display = "none"; }}
             />
             {featured && (
-              <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/80 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
             )}
           </div>
 
