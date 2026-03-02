@@ -1,52 +1,45 @@
 #!/usr/bin/env bash
-set -e
+# ══════════════════════════════════════════════════════════════════════════════
+# update.sh — Pull latest code and redeploy the Pulse Dashboard
+#
+# Run on your VPS as root whenever you push changes:
+#   sudo bash /opt/dashboard/deploy/update.sh
+# ══════════════════════════════════════════════════════════════════════════════
+set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-FRONTEND_DIR="$REPO_ROOT/frontend"
-BACKEND_DIR="$REPO_ROOT/backend"
+APP_DIR="/opt/dashboard"
+WEBROOT="/var/www/dashboard"
+SERVICE="pulse"
+BRANCH="main"
 
-log() { echo "[$(date '+%H:%M:%S')] $*"; }
+GREEN='\033[0;32m'; BOLD='\033[1m'; NC='\033[0m'
+step() { echo -e "\n${GREEN}${BOLD}[$(date +%H:%M:%S)]${NC} $*"; }
 
-log "Pulling latest code from main..."
-git -C "$REPO_ROOT" fetch origin main
-git -C "$REPO_ROOT" checkout main
-git -C "$REPO_ROOT" pull origin main
+[[ $EUID -ne 0 ]] && echo "Run as root: sudo bash update.sh" && exit 1
 
-log "Updating Python dependencies..."
-pip install -r "$BACKEND_DIR/requirements.txt" -q
+step "Pulling latest code from $BRANCH..."
+git -C "$APP_DIR" fetch origin "$BRANCH"
+git -C "$APP_DIR" checkout "$BRANCH"
+git -C "$APP_DIR" pull origin "$BRANCH"
 
-log "Restarting backend..."
-RESTARTED=false
-# Try systemd (check common service names)
-for svc in dashboard backend dashboard-backend uvicorn; do
-    if systemctl is-active --quiet "$svc" 2>/dev/null; then
-        systemctl restart "$svc"
-        log "Restarted systemd service: $svc"
-        RESTARTED=true
-        break
-    fi
-done
-# Try supervisord
-if ! $RESTARTED && command -v supervisorctl &>/dev/null; then
-    if supervisorctl status 2>/dev/null | grep -qiE "backend|uvicorn|dashboard"; then
-        supervisorctl restart all
-        log "Restarted via supervisorctl"
-        RESTARTED=true
-    fi
-fi
-# Try PM2
-if ! $RESTARTED && command -v pm2 &>/dev/null; then
-    if pm2 list 2>/dev/null | grep -q online; then
-        pm2 restart all
-        log "Restarted via pm2"
-        RESTARTED=true
-    fi
-fi
-if ! $RESTARTED; then
-    log "WARNING: Could not detect a process manager. Backend process may need a manual restart."
-fi
+step "Updating Python dependencies..."
+cd "$APP_DIR/backend"
+source venv/bin/activate
+pip install --quiet -r requirements.txt
+deactivate
 
-log "Rebuilding React frontend..."
-cd "$FRONTEND_DIR"
-yarn install          # no --frozen-lockfile: yarn.lock is not committed to the repo
-yarn build
+step "Rebuilding React frontend..."
+cd "$APP_DIR/frontend"
+yarn install --silent
+REACT_APP_BACKEND_URL="" yarn build
+
+cp -r build/. "$WEBROOT/"
+chown -R www-data:www-data "$WEBROOT"
+
+step "Restarting backend service..."
+systemctl restart "$SERVICE"
+
+echo ""
+echo -e "${GREEN}${BOLD}Update complete!${NC}"
+echo ""
+systemctl status "$SERVICE" --no-pager -l
