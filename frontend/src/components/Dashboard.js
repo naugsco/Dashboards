@@ -8,7 +8,9 @@ import NewsGrid from "@/components/NewsGrid";
 import StatsPanel from "@/components/StatsPanel";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = process.env.REACT_APP_BACKEND_URL
+  ? `${process.env.REACT_APP_BACKEND_URL}/api`
+  : "/api";
 
 export default function Dashboard() {
   const [stories, setStories] = useState([]);

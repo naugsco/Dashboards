@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter, Query
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -23,7 +24,36 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-app = FastAPI()
+background_task = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global background_task
+    # Startup: create DB indexes and start background fetcher
+    await db.news_stories.create_index([("country", 1), ("relevance_score", -1)])
+    await db.news_stories.create_index([("priority", 1)])
+    await db.news_stories.create_index([("source", 1)])
+    background_task = asyncio.create_task(periodic_fetch())
+    logger.info("Background news fetcher started (every 15 minutes)")
+    yield
+    # Shutdown: cancel background task and close DB
+    if background_task:
+        background_task.cancel()
+    client.close()
+
+
+app = FastAPI(lifespan=lifespan)
+
+# CORS must be added before routes are included
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 api_router = APIRouter(prefix="/api")
 
 logger = logging.getLogger(__name__)
@@ -432,10 +462,23 @@ async def fetch_all_news():
 
     async with httpx.AsyncClient(headers={"User-Agent": "Mozilla/5.0 (compatible; PulseNewsBot/1.0)"}) as http_client:
 
-        # === BBC RSS Feeds ===
+        # === Fetch all RSS feeds in parallel for speed ===
+        all_feed_urls = BBC_RSS_FEEDS + EURONEWS_RSS_FEEDS + [f[0] for f in REGIONAL_RSS_FEEDS]
+        feed_results = await asyncio.gather(
+            *[fetch_rss_feed(url, http_client) for url in all_feed_urls],
+            return_exceptions=True
+        )
+
+        # Split results back into groups
+        bbc_results = feed_results[:len(BBC_RSS_FEEDS)]
+        euro_results = feed_results[len(BBC_RSS_FEEDS):len(BBC_RSS_FEEDS) + len(EURONEWS_RSS_FEEDS)]
+        regional_results = feed_results[len(BBC_RSS_FEEDS) + len(EURONEWS_RSS_FEEDS):]
+
+        # === Process BBC RSS Feeds ===
         bbc_seen_urls = set()
-        for feed_url in BBC_RSS_FEEDS:
-            entries = await fetch_rss_feed(feed_url, http_client)
+        for entries in bbc_results:
+            if isinstance(entries, Exception):
+                continue
             for entry in entries:
                 parsed = parse_rss_entry(entry, "BBC")
                 if not parsed["title"] or parsed["url"] in bbc_seen_urls:
@@ -456,14 +499,14 @@ async def fetch_all_news():
                         "sources": ["BBC"],
                         "source_count": 1,
                     })
-            await asyncio.sleep(0.3)
         logger.info(f"BBC RSS: fetched {len(bbc_seen_urls)} unique articles, {sum(1 for s in all_stories if s['source']=='BBC')} country-matched stories")
 
-        # === Euronews RSS Feeds ===
+        # === Process Euronews RSS Feeds ===
         euro_seen_urls = set()
         euro_start = len(all_stories)
-        for feed_url in EURONEWS_RSS_FEEDS:
-            entries = await fetch_rss_feed(feed_url, http_client)
+        for entries in euro_results:
+            if isinstance(entries, Exception):
+                continue
             for entry in entries:
                 parsed = parse_rss_entry(entry, "Euronews")
                 if not parsed["title"] or parsed["url"] in euro_seen_urls:
@@ -484,15 +527,16 @@ async def fetch_all_news():
                         "sources": ["Euronews"],
                         "source_count": 1,
                     })
-            await asyncio.sleep(0.3)
         euro_count = sum(1 for s in all_stories[euro_start:] if s['source'] == 'Euronews')
         logger.info(f"Euronews RSS: fetched {len(euro_seen_urls)} unique articles, {euro_count} country-matched stories")
 
-        # === Regional RSS Feeds (for less-covered countries) ===
+        # === Process Regional RSS Feeds ===
         regional_seen_urls = set()
         regional_start = len(all_stories)
-        for feed_url, source_label, target_country in REGIONAL_RSS_FEEDS:
-            entries = await fetch_rss_feed(feed_url, http_client)
+        for i, (feed_url, source_label, target_country) in enumerate(REGIONAL_RSS_FEEDS):
+            entries = regional_results[i]
+            if isinstance(entries, Exception):
+                continue
             for entry in entries:
                 parsed = parse_rss_entry(entry, source_label)
                 if not parsed["title"] or parsed["url"] in regional_seen_urls:
@@ -502,13 +546,10 @@ async def fetch_all_news():
                 if is_sports(title, desc):
                     continue
                 if target_country:
-                    # Fixed country assignment for country-specific feeds
                     countries = [target_country]
                 else:
-                    # Baltic Times etc — detect from content
                     countries = assign_countries(title, desc)
                     if not countries:
-                        # For Baltic Times, default to all 3 Baltic states if no match
                         if "baltic" in source_label.lower():
                             countries = ["Latvia", "Lithuania", "Estonia"]
                         else:
@@ -522,59 +563,59 @@ async def fetch_all_news():
                         "sources": [source_label],
                         "source_count": 1,
                     })
-            await asyncio.sleep(0.3)
         regional_count = len(all_stories) - regional_start
         logger.info(f"Regional RSS: fetched {len(regional_seen_urls)} unique articles, {regional_count} country-matched stories")
 
         # === AP via NewsAPI ===
-        try:
-            resp = await http_client.get(
-                f"{NEWS_API_BASE}/everything",
-                params={
-                    "q": query,
-                    "sources": "associated-press",
-                    "language": "en",
-                    "sortBy": "publishedAt",
-                    "pageSize": 100,
-                    "apiKey": NEWS_API_KEY,
-                },
-                timeout=20.0
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                ap_count = 0
-                for article in data.get("articles", []):
-                    title = article.get("title", "") or ""
-                    desc = article.get("description", "") or ""
-                    if is_sports(title, desc):
-                        continue
-                    countries = assign_countries(title, desc, broad_match=True)
-                    if not countries:
-                        continue
-                    pub_at = article.get("publishedAt", "")
-                    for c in countries:
-                        all_stories.append({
-                            "title": title,
-                            "description": desc,
-                            "url": article.get("url", ""),
-                            "image_url": article.get("urlToImage", ""),
-                            "published_at": pub_at,
-                            "source": "AP",
-                            "source_id": "associated-press",
-                            "country": c,
-                            "priority": classify_priority(title, desc),
-                            "relevance_score": compute_relevance(title, desc, c, pub_at),
-                            "sources": ["AP"],
-                            "source_count": 1,
-                        })
-                        ap_count += 1
-                logger.info(f"AP NewsAPI: {data.get('totalResults', 0)} results, {ap_count} country-matched stories")
-            elif resp.status_code == 429:
-                logger.warning("AP NewsAPI rate limited. BBC & Euronews RSS still available.")
-            else:
-                logger.warning(f"AP NewsAPI returned {resp.status_code}")
-        except Exception as e:
-            logger.error(f"Error fetching AP: {e}")
+        if NEWS_API_KEY:
+            try:
+                resp = await http_client.get(
+                    f"{NEWS_API_BASE}/everything",
+                    params={
+                        "q": query,
+                        "sources": "associated-press",
+                        "language": "en",
+                        "sortBy": "publishedAt",
+                        "pageSize": 100,
+                        "apiKey": NEWS_API_KEY,
+                    },
+                    timeout=20.0
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    ap_count = 0
+                    for article in data.get("articles", []):
+                        title = article.get("title", "") or ""
+                        desc = article.get("description", "") or ""
+                        if is_sports(title, desc):
+                            continue
+                        countries = assign_countries(title, desc, broad_match=True)
+                        if not countries:
+                            continue
+                        pub_at = article.get("publishedAt", "")
+                        for c in countries:
+                            all_stories.append({
+                                "title": title,
+                                "description": desc,
+                                "url": article.get("url", ""),
+                                "image_url": article.get("urlToImage", ""),
+                                "published_at": pub_at,
+                                "source": "AP",
+                                "source_id": "associated-press",
+                                "country": c,
+                                "priority": classify_priority(title, desc),
+                                "relevance_score": compute_relevance(title, desc, c, pub_at),
+                                "sources": ["AP"],
+                                "source_count": 1,
+                            })
+                            ap_count += 1
+                    logger.info(f"AP NewsAPI: {data.get('totalResults', 0)} results, {ap_count} country-matched stories")
+                elif resp.status_code == 429:
+                    logger.warning("AP NewsAPI rate limited. BBC & Euronews RSS still available.")
+                else:
+                    logger.warning(f"AP NewsAPI returned {resp.status_code}")
+            except Exception as e:
+                logger.error(f"Error fetching AP: {e}")
 
         # === Enrich missing thumbnails via og:image ===
         await enrich_missing_images(all_stories, http_client)
@@ -705,16 +746,18 @@ async def trigger_refresh():
 
 app.include_router(api_router)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Serve React build if it exists (standalone mode without nginx)
+FRONTEND_BUILD = ROOT_DIR.parent / "frontend" / "build"
+if FRONTEND_BUILD.is_dir():
+    from starlette.responses import FileResponse
 
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        file_path = FRONTEND_BUILD / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(FRONTEND_BUILD / "index.html")
 
-background_task = None
 
 async def periodic_fetch():
     while True:
@@ -723,18 +766,3 @@ async def periodic_fetch():
         except Exception as e:
             logger.error(f"Periodic fetch error: {e}")
         await asyncio.sleep(900)  # 15 minutes
-
-
-@app.on_event("startup")
-async def startup():
-    global background_task
-    background_task = asyncio.create_task(periodic_fetch())
-    logger.info("Background news fetcher started (every 15 minutes)")
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    global background_task
-    if background_task:
-        background_task.cancel()
-    client.close()
