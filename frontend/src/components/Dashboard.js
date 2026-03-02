@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [darkMode, setDarkMode] = useState(true);
   const timerRef = useRef(null);
   const refreshKeyRef = useRef(0);
+  const abortControllerRef = useRef(null);
 
   // Apply theme class to document
   useEffect(() => {
@@ -36,6 +37,12 @@ export default function Dashboard() {
   }, [darkMode]);
 
   const fetchStories = useCallback(async () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const params = {};
       if (selectedCountry !== "all") params.country = selectedCountry;
@@ -43,8 +50,8 @@ export default function Dashboard() {
       params.limit = 200;
 
       const [newsResp, statsResp] = await Promise.all([
-        axios.get(`${API}/news`, { params }),
-        axios.get(`${API}/news/stats`),
+        axios.get(`${API}/news`, { params, signal: controller.signal }),
+        axios.get(`${API}/news/stats`, { signal: controller.signal }),
       ]);
 
       setStories(newsResp.data.stories || []);
@@ -52,6 +59,7 @@ export default function Dashboard() {
       setLastUpdated(statsResp.data.last_updated);
       setLoading(false);
     } catch (err) {
+      if (axios.isCancel(err) || err.name === "CanceledError") return;
       console.error("Failed to fetch news:", err);
       setLoading(false);
     }
@@ -74,6 +82,12 @@ export default function Dashboard() {
   useEffect(() => {
     fetchStories();
   }, [fetchStories]);
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+    };
+  }, []);
 
   // Auto-refresh countdown
   useEffect(() => {
