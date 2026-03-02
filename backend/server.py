@@ -12,6 +12,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
+from collections import defaultdict
 import feedparser
 from difflib import SequenceMatcher
 
@@ -170,7 +171,7 @@ def classify_priority(title: str, description: str) -> str:
     return "general"
 
 
-def compute_relevance(title: str, description: str, country: str) -> float:
+def compute_relevance(title: str, description: str, country: str, published_at: str = "") -> float:
     text = f"{title} {description}".lower()
     country_lower = country.lower()
     score = 0.0
@@ -189,7 +190,17 @@ def compute_relevance(title: str, description: str, country: str) -> float:
         score += 3.0
     elif priority == "politics":
         score += 2.0
-    return min(score, 20.0)
+    # Recency bonus: up to +10 for stories published today, decaying to 0 at 10 days old
+    if published_at:
+        try:
+            pub_dt = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+            if pub_dt.tzinfo is None:
+                pub_dt = pub_dt.replace(tzinfo=timezone.utc)
+            hours_old = (datetime.now(timezone.utc) - pub_dt).total_seconds() / 3600.0
+            score += max(0.0, 10.0 - hours_old / 24.0)
+        except (ValueError, TypeError):
+            pass
+    return min(score, 30.0)
 
 
 def deduplicate_stories(stories: list) -> list:
@@ -441,7 +452,7 @@ async def fetch_all_news():
                         **parsed,
                         "country": c,
                         "priority": classify_priority(title, desc),
-                        "relevance_score": compute_relevance(title, desc, c),
+                        "relevance_score": compute_relevance(title, desc, c, parsed["published_at"]),
                         "sources": ["BBC"],
                         "source_count": 1,
                     })
@@ -469,7 +480,7 @@ async def fetch_all_news():
                         **parsed,
                         "country": c,
                         "priority": classify_priority(title, desc),
-                        "relevance_score": compute_relevance(title, desc, c),
+                        "relevance_score": compute_relevance(title, desc, c, parsed["published_at"]),
                         "sources": ["Euronews"],
                         "source_count": 1,
                     })
@@ -507,7 +518,7 @@ async def fetch_all_news():
                         **parsed,
                         "country": c,
                         "priority": classify_priority(title, desc),
-                        "relevance_score": compute_relevance(title, desc, c),
+                        "relevance_score": compute_relevance(title, desc, c, parsed["published_at"]),
                         "sources": [source_label],
                         "source_count": 1,
                     })
@@ -540,18 +551,19 @@ async def fetch_all_news():
                     countries = assign_countries(title, desc, broad_match=True)
                     if not countries:
                         continue
+                    pub_at = article.get("publishedAt", "")
                     for c in countries:
                         all_stories.append({
                             "title": title,
                             "description": desc,
                             "url": article.get("url", ""),
                             "image_url": article.get("urlToImage", ""),
-                            "published_at": article.get("publishedAt", ""),
+                            "published_at": pub_at,
                             "source": "AP",
                             "source_id": "associated-press",
                             "country": c,
                             "priority": classify_priority(title, desc),
-                            "relevance_score": compute_relevance(title, desc, c),
+                            "relevance_score": compute_relevance(title, desc, c, pub_at),
                             "sources": ["AP"],
                             "source_count": 1,
                         })
@@ -567,8 +579,20 @@ async def fetch_all_news():
         # === Enrich missing thumbnails via og:image ===
         await enrich_missing_images(all_stories, http_client)
 
-    all_stories = multi_source_boost(all_stories)
-    all_stories = deduplicate_stories(all_stories)
+    # Apply multi_source_boost and deduplicate_stories per country to prevent
+    # cross-country story loss (e.g. a NATO story assigned to both Iceland and UK
+    # would otherwise have all but the highest-scoring country version dropped).
+    by_country = defaultdict(list)
+    for story in all_stories:
+        by_country[story["country"]].append(story)
+
+    processed = []
+    for country_stories in by_country.values():
+        country_stories = multi_source_boost(country_stories)
+        country_stories = deduplicate_stories(country_stories)
+        processed.extend(country_stories)
+    all_stories = processed
+
     all_stories = enforce_source_diversity(all_stories)
     all_stories.sort(key=lambda s: s.get("relevance_score", 0), reverse=True)
 
