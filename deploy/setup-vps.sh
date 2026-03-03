@@ -21,7 +21,7 @@ set -euo pipefail
 APP_DIR="/opt/dashboard"
 WEBROOT="/var/www/dashboard"
 SERVICE="pulse"
-BRANCH="claude/deploy-dashboard-live-BlXG5"
+BRANCH="main"
 
 # Colour helpers
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; BOLD='\033[1m'; NC='\033[0m'
@@ -68,7 +68,9 @@ echo "  Installing Node.js 18 LTS..."
 curl -fsSL https://deb.nodesource.com/setup_18.x | bash - > /dev/null 2>&1
 apt-get install -y -q nodejs
 
-echo "  Node $(node -v) | npm $(npm -v)"
+echo "  Installing Yarn..."
+npm install -g yarn
+echo "  Node $(node -v) | Yarn $(yarn -v)"
 
 # ── 4. Clone repository ───────────────────────────────────────────────────────
 step "4/7 Cloning repository to $APP_DIR..."
@@ -94,8 +96,8 @@ echo "  Python dependencies installed."
 # ── 6. Build React frontend ───────────────────────────────────────────────────
 step "6/7 Building React frontend (takes 1–3 minutes)..."
 cd "$APP_DIR/frontend"
-npm install --silent
-REACT_APP_BACKEND_URL="" npm run build
+yarn install --frozen-lockfile
+REACT_APP_BACKEND_URL="" yarn build
 
 mkdir -p "$WEBROOT"
 cp -r build/. "$WEBROOT/"
