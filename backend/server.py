@@ -115,8 +115,12 @@ DISASTER_KEYWORDS = [
     "climate emergency", "power outage", "blackout"
 ]
 
+CHURCH_KEYWORDS = [
+    "church of jesus christ", "latter-day saints", "latter day saints",
+    "lds church", "mormon", "mormons", "book of mormon",
+]
+
 TRUSTED_SOURCES = {
-    "associated-press": "AP",
     "bbc-news": "BBC",
 }
 EURONEWS_DOMAIN = "euronews.com"
@@ -190,10 +194,11 @@ def classify_priority(title: str, description: str) -> str:
     text = f"{title} {description}".lower()
     disaster_score = sum(1 for kw in DISASTER_KEYWORDS if kw in text)
     politics_score = sum(1 for kw in POLITICS_KEYWORDS if kw in text)
+    church_score = sum(1 for kw in CHURCH_KEYWORDS if kw in text)
     if disaster_score >= 2:
         return "disaster"
-    if politics_score >= 2:
-        return "politics"
+    if church_score >= 1:
+        return "church"
     if disaster_score >= 1:
         return "disaster"
     if politics_score >= 1:
@@ -218,6 +223,8 @@ def compute_relevance(title: str, description: str, country: str, published_at: 
     priority = classify_priority(title, description)
     if priority == "disaster":
         score += 3.0
+    elif priority == "church":
+        score += 2.5
     elif priority == "politics":
         score += 2.0
     # Recency bonus: up to +10 for stories published today, decaying to 0 at 10 days old

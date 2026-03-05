@@ -23,6 +23,7 @@ const SOURCE_COLORS = {
 const PRIORITY_CONFIG = {
   politics: { label: "Politics", color: "bg-orange-500/15 text-orange-400 border-orange-500/20" },
   disaster: { label: "Disaster", color: "bg-blue-500/15 text-blue-400 border-blue-500/20" },
+  church: { label: "Church", color: "bg-purple-500/15 text-purple-400 border-purple-500/20" },
   general: { label: "General", color: "bg-zinc-500/15 text-zinc-400 border-zinc-500/20" },
 };
 
@@ -49,6 +50,8 @@ export default function NewsCard({ story, featured, showImages = true }) {
         story.priority === "politics" ? "priority-politics" : ""
       } ${
         story.priority === "disaster" ? "priority-disaster" : ""
+      } ${
+        story.priority === "church" ? "priority-church" : ""
       }`}
     >
       {hasImage ? (
