@@ -738,12 +738,6 @@ async def get_countries():
     return {"countries": list(COUNTRIES.keys())}
 
 
-@api_router.post("/news/refresh")
-async def trigger_refresh():
-    count = await fetch_all_news()
-    return {"message": "Refresh complete", "story_count": count}
-
-
 app.include_router(api_router)
 
 # Serve React build if it exists (standalone mode without nginx)

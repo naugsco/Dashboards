@@ -1,9 +1,9 @@
-import { RefreshCw, Radio, Image, Sun, Moon } from "lucide-react";
+import { Radio, Image, Sun, Moon } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 
-export default function Header({ lastUpdated, secondsUntilRefresh, onRefresh, refreshing, totalStories, refreshKey, showImages, onToggleImages, darkMode, onToggleDarkMode }) {
+export default function Header({ lastUpdated, secondsUntilRefresh, totalStories, showImages, onToggleImages, darkMode, onToggleDarkMode }) {
   const minutes = Math.floor(secondsUntilRefresh / 60);
   const seconds = secondsUntilRefresh % 60;
   const progressValue = ((900 - secondsUntilRefresh) / 900) * 100;
@@ -87,15 +87,6 @@ export default function Header({ lastUpdated, secondsUntilRefresh, onRefresh, re
               </Tooltip>
             </TooltipProvider>
 
-            <button
-              data-testid="refresh-button"
-              onClick={onRefresh}
-              disabled={refreshing}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-sm transition-colors duration-200 disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              Refresh
-            </button>
           </div>
         </div>
       </div>
