@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
-import { toast } from "sonner";
 import Header from "@/components/Header";
 import EuropeMap from "@/components/EuropeMap";
 import CountryFilter from "@/components/CountryFilter";
@@ -18,13 +17,11 @@ export default function Dashboard() {
   const [selectedCountry, setSelectedCountry] = useState("all");
   const [selectedPriority, setSelectedPriority] = useState("all");
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [secondsUntilRefresh, setSecondsUntilRefresh] = useState(900);
   const [showImages, setShowImages] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
   const timerRef = useRef(null);
-  const refreshKeyRef = useRef(0);
   const abortControllerRef = useRef(null);
 
   // Apply theme class to document
@@ -67,20 +64,6 @@ export default function Dashboard() {
     }
   }, [selectedCountry, selectedPriority]);
 
-  const handleManualRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await axios.post(`${API}/news/refresh`);
-      await fetchStories();
-      setSecondsUntilRefresh(900);
-      refreshKeyRef.current += 1;
-      toast.success("News refreshed successfully");
-    } catch (err) {
-      toast.error("Failed to refresh news");
-    }
-    setRefreshing(false);
-  };
-
   useEffect(() => {
     fetchStories();
   }, [fetchStories]);
@@ -112,10 +95,7 @@ export default function Dashboard() {
       <Header
         lastUpdated={lastUpdated}
         secondsUntilRefresh={secondsUntilRefresh}
-        onRefresh={handleManualRefresh}
-        refreshing={refreshing}
         totalStories={stats?.total_stories || 0}
-        refreshKey={refreshKeyRef.current}
         showImages={showImages}
         onToggleImages={setShowImages}
         darkMode={darkMode}
