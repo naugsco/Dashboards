@@ -2,6 +2,10 @@
 # ══════════════════════════════════════════════════════════════════════════════
 # update.sh — Pull latest code, rebuild, and redeploy
 #
+# Supports two deployment modes:
+#   1. Docker (Traefik + nginx container) — detected automatically
+#   2. System nginx — fallback if no dashboard container is found
+#
 # Run from the VPS:
 #   sudo bash /opt/dashboard/deploy/update.sh
 # ══════════════════════════════════════════════════════════════════════════════
@@ -12,8 +16,27 @@ FRONTEND_DIR="$REPO_ROOT/frontend"
 BACKEND_DIR="$REPO_ROOT/backend"
 WEBROOT="/var/www/dashboard"
 SERVICE="pulse"
+DASHBOARD_CONTAINER=""
 
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+# ── Detect deployment mode ─────────────────────────────────────────────────
+detect_mode() {
+    # Look for a running or stopped Docker dashboard container
+    if command -v docker &>/dev/null; then
+        DASHBOARD_CONTAINER=$(docker ps -a --filter "name=dashboard" --format '{{.Names}}' | head -1)
+    fi
+
+    if [[ -n "$DASHBOARD_CONTAINER" ]]; then
+        log "Detected Docker deployment (container: $DASHBOARD_CONTAINER)"
+        echo "docker"
+    else
+        log "Detected system nginx deployment"
+        echo "system"
+    fi
+}
+
+MODE=$(detect_mode)
 
 log "Pulling latest code from main..."
 git -C "$REPO_ROOT" fetch origin main
@@ -37,7 +60,15 @@ chown -R www-data:www-data "$WEBROOT"
 log "Restarting backend service..."
 systemctl restart "$SERVICE"
 
-log "Reloading nginx..."
-nginx -t && systemctl reload nginx
+# ── Reload the correct web server ──────────────────────────────────────────
+if [[ "$MODE" == "docker" ]]; then
+    log "Copying frontend build into Docker container ($DASHBOARD_CONTAINER)..."
+    docker cp "$WEBROOT/." "$DASHBOARD_CONTAINER:/usr/share/nginx/html/"
+    docker restart "$DASHBOARD_CONTAINER"
+    log "Docker dashboard container restarted."
+else
+    log "Reloading system nginx..."
+    nginx -t && systemctl reload nginx
+fi
 
 log "Update complete! Dashboard is live."
