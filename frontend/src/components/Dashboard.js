@@ -143,6 +143,7 @@ export default function Dashboard() {
 function PriorityFilter({ selected, onChange }) {
   const options = [
     { value: "all", label: "All" },
+    { value: "church", label: "Church" },
     { value: "politics", label: "Politics" },
     { value: "disaster", label: "Disasters" },
     { value: "general", label: "General" },
@@ -161,6 +162,8 @@ function PriorityFilter({ selected, onChange }) {
                 ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
                 : opt.value === "disaster"
                 ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                : opt.value === "church"
+                ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
                 : "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:text-foreground border border-transparent"
           }`}

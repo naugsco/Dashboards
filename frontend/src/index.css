@@ -183,6 +183,9 @@ h1, h2, h3, h4, h5, h6 {
     border-left: 3px solid #3b82f6;
     animation: pulse-border 3s ease-in-out infinite;
 }
+.priority-church {
+    border-left: 3px solid #a855f7;
+}
 
 /* Refresh progress bar */
 @keyframes countdown {
