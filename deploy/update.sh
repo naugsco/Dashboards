@@ -65,20 +65,10 @@ systemctl restart "$SERVICE"
 
 # ── Reload the correct web server ──────────────────────────────────────────
 if [[ "$MODE" == "docker" ]]; then
-    log "Copying frontend build into Docker container ($DASHBOARD_CONTAINER)..."
-
-    # Ensure host.docker.internal resolves inside the container
-    HOST_IP=$(ip -4 addr show docker0 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' || echo "172.17.0.1")
-    docker exec "$DASHBOARD_CONTAINER" sh -c \
-        "grep -q host.docker.internal /etc/hosts 2>/dev/null || echo '$HOST_IP host.docker.internal' >> /etc/hosts"
-
-    # Copy the Docker-specific nginx config (proxies /api/ to host backend)
-    docker cp "$REPO_ROOT/deploy/nginx-dashboard-docker.conf" \
-        "$DASHBOARD_CONTAINER:/etc/nginx/conf.d/default.conf"
-    # Copy the built frontend files
-    docker cp "$WEBROOT/." "$DASHBOARD_CONTAINER:/usr/share/nginx/html/"
-    docker restart "$DASHBOARD_CONTAINER"
-    log "Docker dashboard container restarted."
+    log "Applying Docker nginx config..."
+    cp "$REPO_ROOT/deploy/nginx-dashboard-docker.conf" "$REPO_ROOT/deploy/nginx-dashboard.conf"
+    docker exec "$DASHBOARD_CONTAINER" nginx -s reload
+    log "Docker dashboard container reloaded."
 else
     log "Reloading system nginx..."
     nginx -t && systemctl reload nginx
