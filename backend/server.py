@@ -704,32 +704,66 @@ async def get_news(
     if priority and priority != "all":
         query["priority"] = priority
 
-    stories = await db.news_stories.find(query, {"_id": 0}).sort("relevance_score", -1).to_list(limit)
+    # When showing all countries, deduplicate by story_hash to avoid
+    # showing the same story multiple times (once per assigned country)
+    if not country or country == "all":
+        pipeline = []
+        if query:
+            pipeline.append({"$match": query})
+        pipeline.extend([
+            {"$sort": {"relevance_score": -1}},
+            {"$group": {"_id": "$story_hash", "doc": {"$first": "$$ROOT"}}},
+            {"$replaceRoot": {"newRoot": "$doc"}},
+            {"$sort": {"relevance_score": -1}},
+            {"$limit": limit},
+            {"$project": {"_id": 0}},
+        ])
+        stories = await db.news_stories.aggregate(pipeline).to_list(limit)
+    else:
+        stories = await db.news_stories.find(query, {"_id": 0}).sort("relevance_score", -1).to_list(limit)
+
     return {"stories": stories, "count": len(stories)}
 
 
 @api_router.get("/news/stats")
-async def get_news_stats():
-    pipeline = [
-        {"$group": {"_id": "$source", "count": {"$sum": 1}}},
-        {"$sort": {"count": -1}}
-    ]
-    source_dist = await db.news_stories.aggregate(pipeline).to_list(100)
+async def get_news_stats(
+    country: Optional[str] = Query(None),
+    priority: Optional[str] = Query(None),
+):
+    # Build match filter so stats reflect the active filters
+    match_filter = {}
+    if country and country != "all":
+        match_filter["country"] = country
+    if priority and priority != "all":
+        match_filter["priority"] = priority
 
-    country_pipeline = [
+    match_stage = [{"$match": match_filter}] if match_filter else []
+
+    source_pipeline = match_stage + [
+        {"$group": {"_id": "$source", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+    ]
+    source_dist = await db.news_stories.aggregate(source_pipeline).to_list(100)
+
+    # Country distribution: filter by priority only (not country) so the
+    # country filter bar always shows counts for every country
+    country_match = {}
+    if priority and priority != "all":
+        country_match["priority"] = priority
+    country_pipeline = ([{"$match": country_match}] if country_match else []) + [
         {"$group": {"_id": "$country", "count": {"$sum": 1}}},
-        {"$sort": {"count": -1}}
+        {"$sort": {"count": -1}},
     ]
     country_dist = await db.news_stories.aggregate(country_pipeline).to_list(100)
 
-    priority_pipeline = [
+    priority_pipeline = match_stage + [
         {"$group": {"_id": "$priority", "count": {"$sum": 1}}},
-        {"$sort": {"count": -1}}
+        {"$sort": {"count": -1}},
     ]
     priority_dist = await db.news_stories.aggregate(priority_pipeline).to_list(100)
 
     meta = await db.news_meta.find_one({"key": "last_fetch"}, {"_id": 0})
-    total = await db.news_stories.count_documents({})
+    total = await db.news_stories.count_documents(match_filter)
 
     return {
         "total_stories": total,

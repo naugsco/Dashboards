@@ -17,7 +17,7 @@ export default function NewsGrid({ stories, showImages }) {
     <div data-testid="news-grid" className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {stories.map((story, index) => (
         <NewsCard
-          key={story.story_hash || index}
+          key={`${story.story_hash}-${story.country}-${index}`}
           story={story}
           featured={index < 2 && story.relevance_score >= 8}
           showImages={showImages}

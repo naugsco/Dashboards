@@ -48,9 +48,13 @@ export default function Dashboard() {
       if (selectedPriority !== "all") params.priority = selectedPriority;
       params.limit = 200;
 
+      const statsParams = {};
+      if (selectedCountry !== "all") statsParams.country = selectedCountry;
+      if (selectedPriority !== "all") statsParams.priority = selectedPriority;
+
       const [newsResp, statsResp] = await Promise.all([
         axios.get(`${API}/news`, { params, signal: controller.signal }),
-        axios.get(`${API}/news/stats`, { signal: controller.signal }),
+        axios.get(`${API}/news/stats`, { params: statsParams, signal: controller.signal }),
       ]);
 
       setStories(newsResp.data.stories || []);
