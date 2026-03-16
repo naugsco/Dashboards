@@ -34,6 +34,11 @@ async def lifespan(app: FastAPI):
     await db.news_stories.create_index([("country", 1), ("relevance_score", -1)])
     await db.news_stories.create_index([("priority", 1)])
     await db.news_stories.create_index([("source", 1)])
+    await db.news_stories.create_index(
+        [("story_hash", 1), ("country", 1)],
+        unique=True,
+        background=True,
+    )
     background_task = asyncio.create_task(periodic_fetch())
     logger.info("Background news fetcher started (every 15 minutes)")
     yield
@@ -651,8 +656,13 @@ async def fetch_all_news():
     # Only replace data if we actually got stories; preserve existing data on API failure
     if all_stories:
         await db.news_stories.delete_many({})
-        await db.news_stories.insert_many(all_stories)
-        logger.info(f"Fetched and stored {len(all_stories)} stories")
+        try:
+            await db.news_stories.insert_many(all_stories, ordered=False)
+        except Exception as e:
+            # ordered=False continues past duplicate key errors; log but don't fail
+            logger.warning(f"insert_many partial: {e}")
+        stored = await db.news_stories.count_documents({})
+        logger.info(f"Fetched and stored {stored} stories (from {len(all_stories)} candidates)")
     else:
         existing = await db.news_stories.count_documents({})
         logger.info(f"No new stories fetched (API may be rate-limited). Preserving {existing} existing stories.")
@@ -704,23 +714,20 @@ async def get_news(
     if priority and priority != "all":
         query["priority"] = priority
 
-    # When showing all countries, deduplicate by story_hash to avoid
-    # showing the same story multiple times (once per assigned country)
-    if not country or country == "all":
-        pipeline = []
-        if query:
-            pipeline.append({"$match": query})
-        pipeline.extend([
-            {"$sort": {"relevance_score": -1}},
-            {"$group": {"_id": "$story_hash", "doc": {"$first": "$$ROOT"}}},
-            {"$replaceRoot": {"newRoot": "$doc"}},
-            {"$sort": {"relevance_score": -1}},
-            {"$limit": limit},
-            {"$project": {"_id": 0}},
-        ])
-        stories = await db.news_stories.aggregate(pipeline).to_list(limit)
-    else:
-        stories = await db.news_stories.find(query, {"_id": 0}).sort("relevance_score", -1).to_list(limit)
+    # Always deduplicate by story_hash to prevent the same story from
+    # appearing multiple times (duplicate DB records or multi-country copies)
+    pipeline = []
+    if query:
+        pipeline.append({"$match": query})
+    pipeline.extend([
+        {"$sort": {"relevance_score": -1}},
+        {"$group": {"_id": "$story_hash", "doc": {"$first": "$$ROOT"}}},
+        {"$replaceRoot": {"newRoot": "$doc"}},
+        {"$sort": {"relevance_score": -1}},
+        {"$limit": limit},
+        {"$project": {"_id": 0}},
+    ])
+    stories = await db.news_stories.aggregate(pipeline).to_list(limit)
 
     return {"stories": stories, "count": len(stories)}
 
