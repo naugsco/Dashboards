@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [darkMode, setDarkMode] = useState(true);
   const timerRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const fetchIdRef = useRef(0);
 
   // Apply theme class to document
   useEffect(() => {
@@ -35,12 +36,22 @@ export default function Dashboard() {
     }
   }, [darkMode]);
 
-  const fetchStories = useCallback(async () => {
+  const fetchStories = useCallback(async ({ clearFirst = false } = {}) => {
+    // Abort any in-flight request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
     const controller = new AbortController();
     abortControllerRef.current = controller;
+
+    // Increment fetch ID so stale responses are ignored
+    const currentFetchId = ++fetchIdRef.current;
+
+    // Clear stories immediately on filter changes so stale cards don't persist.
+    // Skip clearing on auto-refresh to avoid a flash of empty state.
+    if (clearFirst) {
+      setStories([]);
+    }
 
     try {
       const params = {};
@@ -57,6 +68,9 @@ export default function Dashboard() {
         axios.get(`${API}/news/stats`, { params: statsParams, signal: controller.signal }),
       ]);
 
+      // Only apply results if this is still the latest fetch
+      if (currentFetchId !== fetchIdRef.current) return;
+
       setStories(newsResp.data.stories || []);
       setStats(statsResp.data);
       setLastUpdated(statsResp.data.last_updated);
@@ -68,14 +82,21 @@ export default function Dashboard() {
     }
   }, [selectedCountry, selectedPriority]);
 
+  // Re-fetch and clear stale stories whenever filters change
   useEffect(() => {
-    fetchStories();
+    fetchStories({ clearFirst: true });
   }, [fetchStories]);
 
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) abortControllerRef.current.abort();
     };
+  }, []);
+
+  // Reset priority filter to "All" whenever the country changes
+  const handleSelectCountry = useCallback((country) => {
+    setSelectedPriority("all");
+    setSelectedCountry(country);
   }, []);
 
   // Auto-refresh countdown
@@ -110,12 +131,12 @@ export default function Dashboard() {
         <EuropeMap
           countryDistribution={stats?.country_distribution || []}
           selectedCountry={selectedCountry}
-          onSelectCountry={setSelectedCountry}
+          onSelectCountry={handleSelectCountry}
         />
 
         <CountryFilter
           selectedCountry={selectedCountry}
-          onSelectCountry={setSelectedCountry}
+          onSelectCountry={handleSelectCountry}
           countryDistribution={stats?.country_distribution || []}
         />
 
